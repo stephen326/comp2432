@@ -1,0 +1,9 @@
+interface
+command
+main
+time
+.vscode/
+orders_A.txt
+orderBATCH01.dat
+periods.txt
+*.txt
