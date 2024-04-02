@@ -205,3 +205,100 @@ int main() {
     return 0;
 }
 
+
+
+
+// void addOrder(char orderNumber[], char dueDate[], int quantity, char productName[]) {
+//     FILE *file;
+//     char fileName[] = "plan.txt"; // 使用固定文件名
+
+//     // 打开文件以读取模式
+//     file = fopen(fileName, "r");
+//     if (file == NULL) {
+//         // 如果文件不存在，则创建文件
+//         file = fopen(fileName, "w");
+//         if (file == NULL) {
+//             printf("Error creating file\n");
+//             return;
+//         }
+//     } else {
+//         // 检查文件中是否已存在相同的订单号
+//         char line[100];
+//         while (fgets(line, sizeof(line), file)) {
+//             // 检查每一行是否包含相同的订单号
+//             char *token = strtok(line, " ");
+//             if (token != NULL && strcmp(token, orderNumber) == 0) {
+//                 printf("Order with the same order number already exists\n");
+//                 fclose(file);
+//                 return;
+//             }
+//         }
+//     }
+
+//     fclose(file);
+
+//     // 打开文件以追加模式写入
+//     file = fopen(fileName, "a");
+//     if (file == NULL) {
+//         printf("Error opening file\n");
+//         return;
+//     }
+
+//     // 将订单信息写入文件
+//     fprintf(file, "%s %s %d %s\n", orderNumber, dueDate, quantity, productName);
+
+//     fclose(file);
+// }
+
+// void addOrder2(char orderNumber[], char dueDate[], int quantity, char productName[]) {
+//     FILE *file;
+//     // 根据产品名称确定文件名
+//     char fileName[20];
+//     if (strcmp(productName, "Product_A") == 0||strcmp(productName, "Product_B") == 0||strcmp(productName, "Product_C") == 0) {
+//         strcpy(fileName, "Category_1.txt");
+//     } else if (strcmp(productName, "Product_D") == 0||strcmp(productName, "Product_E") == 0||strcmp(productName, "Product_F") == 0) {
+//         strcpy(fileName, "Category_2.txt");
+//     } else if (strcmp(productName, "Product_G") == 0||strcmp(productName, "Product_H") == 0||strcmp(productName, "Product_I") == 0) {
+//         strcpy(fileName, "Category_3.txt");
+//     } else {
+//         printf("Unknown product\n");
+//         return;
+//     }
+
+//     // 打开文件以读取模式
+//     file = fopen(fileName, "r");
+//     if (file == NULL) {
+//         // 如果文件不存在，则创建文件
+//         file = fopen(fileName, "w");
+//         if (file == NULL) {
+//             printf("Error creating file\n");
+//             return;
+//         }
+//     } else {
+//         // 检查文件中是否已存在相同的订单号
+//         char line[100];
+//         while (fgets(line, sizeof(line), file)) {
+//             // 检查每一行是否包含相同的订单号
+//             char *token = strtok(line, " ");
+//             if (token != NULL && strcmp(token, orderNumber) == 0) {
+//                 printf("Order with the same order number already exists\n");
+//                 fclose(file);
+//                 return;
+//             }
+//         }
+//     }
+
+//     fclose(file);
+
+//     // 打开文件以追加模式写入
+//     file = fopen(fileName, "a");
+//     if (file == NULL) {
+//         printf("Error opening file\n");
+//         return;
+//     }
+
+//     // 将订单信息写入文件
+//     fprintf(file, "%s %s %d %s\n", orderNumber, dueDate, quantity, productName);
+
+//     fclose(file);
+// }
