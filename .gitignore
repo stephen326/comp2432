@@ -2,6 +2,7 @@ interface
 command
 main
 time
+gTt
 .vscode/
 orders_A.txt
 orderBATCH01.dat
