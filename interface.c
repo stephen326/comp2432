@@ -122,13 +122,25 @@ typedef struct {
     Date date;
     ProdBatch batches[CAPACITY];
     int batchCount;
+    int batchQty;
+    int capacity;
 } oneDaySchedule;
 
 // schedule init
-oneDaySchedule initSchedule(Date date) {
+oneDaySchedule initSchedule(Date date, int factory) { // factory 0, 1, 2 for X, Y, Z
     oneDaySchedule schedule;
     schedule.date = date;
     schedule.batchCount = 0;
+    schedule.batchQty = 0;
+    if (factory == 0) {
+        schedule.capacity = PRODUCTIVITY_X;
+    } else if (factory == 1) {
+        schedule.capacity = PRODUCTIVITY_Y;
+    } else if (factory == 2) {
+        schedule.capacity = PRODUCTIVITY_Z;
+    } else {
+        schedule.capacity = 0;
+    }
     return schedule;
 }
 
@@ -238,7 +250,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         for (i = 0; i < 3; i++) {
             Date day = period.startDate;
             for (n = 0; n < period.interval; n++) {
-                timetable[i][n] = initSchedule(day);
+                timetable[i][n] = initSchedule(day, i);
                 day = dateInc(day);
             }
         }
