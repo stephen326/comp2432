@@ -1,24 +1,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-// 定义订单结构体
-typedef struct {
-    char order[20];
-    char due[11]; // 日期格式为 YYYY-MM-DD，包括空字符
-    int qty[20]; // 数量以字符串形式存储
-    char product[20];
-} Order;
-
+#include <sys/wait.h>
 
 #define NUMBER_OF_CHILD 3
 #define READY "R" // student can send this signal to parent to state that he finish on receive 
 #define END "E" // END game signal
+#define CAPACITY 100 // maximum number of orders to be handled
+
+// define order struct to store order information
+typedef struct {
+    char orderNo[20];
+    char due[11]; // Date format is YYYY-MM-DD, including null character \0
+    int  qty;
+    char product[20];
+} Order;
+
+// a null Order
+Order nullOrder = {"NN", "NN", -1, "NN"};
+
+// a tombstone Order
+Order tombstoneOrder = {"XX", "XX", -2, "XX"};
+
+typedef struct {
+    Order orders[CAPACITY]; // array of all orders
+    Order priority_1[CAPACITY]; // array of orders with priorities
+    Order priority_2[CAPACITY];
+    Order priority_3[CAPACITY];
+} Todo;
 
 int findIndex(int arr[], int size, int value) {
     int i = 0;
@@ -30,36 +41,62 @@ int findIndex(int arr[], int size, int value) {
     return -1;
 }
 
-void executeMainPLS(char algorithm[], char outputFileName[]) {
-    int i = 0, n = 0;
-
-    /*
-    before running PLS, we need to read the orders from the files
-    file format (line by line): orderNumber dueDate quantity productName
-    example: "P0001 2024-06-10 2000 Product_A" (end with \n)
-    */
-    // unfinished
-    /*
+void readOrders(char fileName[], Order* orders, int size) {
     FILE *file;
-    char line[100];
-    Order orders[100]; // assume there are at most 100 orders
+    char line[CAPACITY];
     int orderCount = 0;
-    file = fopen("All_Orders.txt", "r");
+    file = fopen(fileName, "r");
     if (file == NULL) {
         printf("Error opening file\n");
         return;
     }
     while (fgets(line, sizeof(line), file)) {
-        sscanf(line, "%s %s %d %s", orders[orderCount].order, orders[orderCount].due, &orders[orderCount].qty, orders[orderCount].product);
+        sscanf(line, "%s %s %d %s", orders[orderCount].orderNo, orders[orderCount].due, &orders[orderCount].qty, orders[orderCount].product);
         orderCount++;
     }
+    fclose(file);
+}
+
+void readTodo(Todo* todo) {
+    readOrders("All_Orders.txt", todo->orders, CAPACITY);
+    readOrders("Category_1.txt", todo->priority_1, CAPACITY);
+    readOrders("Category_2.txt", todo->priority_2, CAPACITY);
+    readOrders("Category_3.txt", todo->priority_3, CAPACITY);
+}
+
+void executeMainPLS(char algorithm[], char outputFileName[]) {
+    int i = 0, n = 0; // loop variables
+
+    /*
+    1.
+    before running PLS, we need to read the orders from the files
+    file format (line by line): orderNumber dueDate quantity productName
+    example: "P0001 2024-06-10 2000 Product_A" (end with \n)
     */
+
+    Todo todo;
+    // padding nullOrder to all orders and priority arrays
+    for (i = 0; i < CAPACITY; i++) {
+        todo.orders[i] = nullOrder;
+        todo.priority_1[i] = nullOrder;
+        todo.priority_2[i] = nullOrder;
+        todo.priority_3[i] = nullOrder;
+    }
+    readTodo(&todo);
+    // testing to print out orders' No until nullOrder
+    for (i = 0; i < CAPACITY; i++) {
+        if (strcmp(todo.orders[i].orderNo, "NN") == 0) {
+            break;
+        }
+        printf("Order No: %s\n", todo.orders[i].orderNo);
+    }
+
+    // 2. set up pipes and fork child processes
 
     // variables for pipe and fork
     int   childPids[NUMBER_OF_CHILD];
     int   p2cPipe[NUMBER_OF_CHILD][2]; // pipe sent from parent to child
     int   c2pPipe[NUMBER_OF_CHILD][2]; // pipe sent from child to parent
-    //int   cNum, endGame = 0;
     char  buf[80];
     
     // creating pipes
@@ -300,12 +337,13 @@ void addBatch(char batchFile[]) {
 }
 
 
-
-
+// functionality has been realized in executeMainPLS
+/*
 void runPLS(char algorithm[]) {
     // 在这里执行 PLS 算法
     printf("Running PLS with algorithm: %s\n", algorithm);
 }
+*/
 
 void printREPORT(char outputFile[]) {
     // 在这里打印报告
