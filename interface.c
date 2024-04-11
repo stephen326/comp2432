@@ -241,11 +241,10 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
     // testing to print out period st/ed/in ////////////////////////////////////////////
     printf("TESTING Period: %d-%d-%d to %d-%d-%d, interval: %d\n", period.startDate.year, period.startDate.month, period.startDate.day, period.endDate.year, period.endDate.month, period.endDate.day, period.interval);
 
-    // 2. If Algorithm is FCFS:
-    if (strcmp(algorithm, "FCFS") == 0) {
-        // do FCFS logic
-        printf("Running PLS with FCFS algorithm\n");
-        oneDaySchedule timetable[3][period.interval]; // 3 factories, each factory has a timetable for each day
+
+    // 2. Construct the timetable for each factory
+
+    oneDaySchedule timetable[3][period.interval]; // 3 factories, each factory has a timetable for each day
         // init every time slot with its corresponding date
         for (i = 0; i < 3; i++) {
             Date day = period.startDate;
@@ -263,9 +262,20 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         }
         */
 
-    }
 
-    // 3. set up pipes and fork child processes
+    // 3. If Algorithm is FCFS:
+    // PR 算法与 FCFS 实质相同，对于PR的实现可以先按照priority排序，然后按照FCFS的方式处理
+
+    if (strcmp(algorithm, "FCFS") == 0) {
+        printf("Running PLS with FCFS algorithm\n");
+
+        // 先模拟填，如果填不进去，尝试填下一个订单。如果填进去了且不超过due，就实际填。
+        // 外层循环按天，内层循环按工厂
+        
+
+    } // 结束结果应当为一个填好的timetable，以及一个rejected orders list
+
+    // 4. set up pipes and fork child processes
 
     // variables for pipe and fork
     int   childPids[NUMBER_OF_CHILD];
@@ -312,6 +322,8 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
             write(p2cPipe[i][1], READY, sizeof(READY));
         }
 
+        // Parent 应当等待所有child完成后，从pipe读取report，将所有的report合并，然后输出到output file
+        // 此外，Parent 应当等待所有child完成后，将所有的rejected orders list合并（如有从Child得到的update），然后输出到output file
 
 
         ///////////////// PARENT LOGIC END ////////////////////
@@ -362,6 +374,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
             }
         }
 
+        // Child 应当取用自己的timetable，然后开始生成output report，最后将report发送给parent
 
         ///////////////// CHILD LOGIC END ////////////////////
 
