@@ -9,20 +9,101 @@
 #define READY "R" // student can send this signal to parent to state that he finish on receive 
 #define END "E" // END game signal
 #define CAPACITY 100 // maximum number of orders to be handled
+#define PRODUCTIVITY_X 300
+#define PRODUCTIVITY_Y 400
+#define PRODUCTIVITY_Z 500
+
+// define struct to store date
+typedef struct {
+    int year;
+    int month;
+    int day;
+} Date;
+
+// a null date
+Date nullDate = {0, 0, 0};
+
+// Date method: str (YYYY-MM-DD) to date
+Date strToDate(char str[]) {
+    Date date;
+    sscanf(str, "%d-%d-%d", &date.year, &date.month, &date.day);
+    return date;
+}
+
+// Date method: compare dates
+int datecmp(Date date1, Date date2) { // if 1 earlier than 2, return -1; if 1 later than 2, return 1; if equal, return 0
+    if (date1.year < date2.year) {
+        return -1;
+    } else if (date1.year > date2.year) {
+        return 1;
+    } else {
+        if (date1.month < date2.month) {
+            return -1;
+        } else if (date1.month > date2.month) {
+            return 1;
+        } else {
+            if (date1.day < date2.day) {
+                return -1;
+            } else if (date1.day > date2.day) {
+                return 1;
+            } else {
+                return 0;
+            }
+        }
+    }
+}
+
+// Date method: increment date by 1 (consider 30/31/Feb. and leap year)
+Date dateInc(Date date) {
+    Date newDate = date;
+    if (date.day == 31) {
+        newDate.day = 1;
+        if (date.month == 12) {
+            newDate.month = 1;
+            newDate.year++;
+        } else {
+            newDate.month++;
+        }
+    } else if (date.day == 30 && (date.month == 4 || date.month == 6 || date.month == 9 || date.month == 11)) {
+        newDate.day = 1;
+        newDate.month++;
+    } else if (date.day == 29 && date.month == 2) {
+        newDate.day = 1;
+        newDate.month++;
+    } else if (date.day == 28 && date.month == 2 && (date.year % 4 != 0 || (date.year % 100 == 0 && date.year % 400 != 0))) {
+        newDate.day = 1;
+        newDate.month++;
+    } else {
+        newDate.day++;
+    }
+    return newDate;
+}
+
+// Date method: Calculate date sum between start and end (including both sides) (consider 30/31/Feb. and leap year)
+int dateInterval(Date start, Date end) {
+    int interval = 0;
+    Date date = start;
+    while (datecmp(date, end) <= 0) {
+        interval++;
+        date = dateInc(date);
+    }
+    return interval;
+}
 
 // define order struct to store order information
 typedef struct {
     char orderNo[20];
-    char due[11]; // Date format is YYYY-MM-DD, including null character \0
+    char due_str[11]; // Date format is YYYY-MM-DD, including null character \0
+    Date due; // Date struct to store due date
     int  qty;
     char product[20];
 } Order;
 
 // a null Order
-Order nullOrder = {"NN", "NN", -1, "NN"};
+Order nullOrder = {"NN", "NN", {0, 0, 0}, -1, "NN"};
 
 // a tombstone Order
-Order tombstoneOrder = {"XX", "XX", -2, "XX"};
+Order tombstoneOrder = {"XX", "XX", {0, 0, 0}, -2, "XX"};
 
 typedef struct {
     Order orders[CAPACITY]; // array of all orders
@@ -30,6 +111,39 @@ typedef struct {
     Order priority_2[CAPACITY];
     Order priority_3[CAPACITY];
 } Todo;
+
+typedef struct {
+    int batchNo;
+    Order order;
+    int batchQty;
+} ProdBatch;
+
+typedef struct {
+    Date date;
+    ProdBatch batches[CAPACITY];
+    int batchCount;
+} oneDaySchedule;
+
+// schedule init
+oneDaySchedule initSchedule(Date date) {
+    oneDaySchedule schedule;
+    schedule.date = date;
+    schedule.batchCount = 0;
+    return schedule;
+}
+
+// add batch to schedule
+void addProdBatch(oneDaySchedule* schedule, ProdBatch batch) {
+    schedule->batches[schedule->batchCount] = batch;
+    schedule->batchCount++;
+}
+
+// define a period struct to store period information
+typedef struct {
+    Date startDate;
+    Date endDate;
+    int interval;
+} Period;
 
 int findIndex(int arr[], int size, int value) {
     int i = 0;
@@ -51,9 +165,26 @@ void readOrders(char fileName[], Order* orders, int size) {
         return;
     }
     while (fgets(line, sizeof(line), file)) {
-        sscanf(line, "%s %s %d %s", orders[orderCount].orderNo, orders[orderCount].due, &orders[orderCount].qty, orders[orderCount].product);
+        sscanf(line, "%s %s %d %s", orders[orderCount].orderNo, orders[orderCount].due_str, &orders[orderCount].qty, orders[orderCount].product);
+        orders[orderCount].due = strToDate(orders[orderCount].due_str);
         orderCount++;
     }
+    fclose(file);
+}
+
+void readPeriod(char fileName[], Period* period) {
+    FILE *file;
+    char line[CAPACITY];
+    file = fopen(fileName, "r");
+    if (file == NULL) {
+        printf("Error opening file\n");
+        return;
+    }
+    char sd[11], ed[11];
+    fscanf(file, "%s %s", sd, ed);
+    period->startDate = strToDate(sd);
+    period->endDate = strToDate(ed);
+    period->interval = dateInterval(period->startDate, period->endDate);
     fclose(file);
 }
 
@@ -69,9 +200,11 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
 
     /*
     1.
-    before running PLS, we need to read the orders from the files
-    file format (line by line): orderNumber dueDate quantity productName
+    before running PLS, we need to read the orders and period from the files
+    orders file format (line by line): orderNumber dueDate quantity productName
     example: "P0001 2024-06-10 2000 Product_A" (end with \n)
+    period file format (fist line only): startDate endDate
+    example: "2024-06-01 2024-06-30"
     */
 
     Todo todo;
@@ -83,15 +216,44 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         todo.priority_3[i] = nullOrder;
     }
     readTodo(&todo);
-    // testing to print out orders' No until nullOrder
+    // testing to print out orders' No until nullOrder /////////////////////////
     for (i = 0; i < CAPACITY; i++) {
         if (strcmp(todo.orders[i].orderNo, "NN") == 0) {
             break;
         }
-        printf("Order No: %s\n", todo.orders[i].orderNo);
+        printf("TESTING Order No: %s\n", todo.orders[i].orderNo);
+    }
+    // read period
+    Period period;
+    readPeriod("periods.txt", &period);
+    // testing to print out period st/ed/in ////////////////////////////////////////////
+    printf("TESTING Period: %d-%d-%d to %d-%d-%d, interval: %d\n", period.startDate.year, period.startDate.month, period.startDate.day, period.endDate.year, period.endDate.month, period.endDate.day, period.interval);
+
+    // 2. If Algorithm is FCFS:
+    if (strcmp(algorithm, "FCFS") == 0) {
+        // do FCFS logic
+        printf("Running PLS with FCFS algorithm\n");
+        oneDaySchedule timetable[3][period.interval]; // 3 factories, each factory has a timetable for each day
+        // init every time slot with its corresponding date
+        for (i = 0; i < 3; i++) {
+            Date day = period.startDate;
+            for (n = 0; n < period.interval; n++) {
+                timetable[i][n] = initSchedule(day);
+                day = dateInc(day);
+            }
+        }
+        // test the timetable print out date padding of each slot
+        /*
+        for (i = 0; i < 3; i++) {
+            for (n = 0; n < period.interval; n++) {
+                printf("TESTING Factory %d, Day %d: %d-%d-%d\n", i, n, timetable[i][n].date.year, timetable[i][n].date.month, timetable[i][n].date.day);
+            }
+        }
+        */
+
     }
 
-    // 2. set up pipes and fork child processes
+    // 3. set up pipes and fork child processes
 
     // variables for pipe and fork
     int   childPids[NUMBER_OF_CHILD];
@@ -355,7 +517,7 @@ int main() {
     char input[100];
     char command[20];
     char arg1[20], arg2[20], arg3[20], arg4[20];
-    char algorithm[20] = "Algorithm0"; // for testing only
+    char algorithm[20] = "FCFS"; // for testing only
     char outputFileName[20] = "output"; // for testing only
     char batchFile[20];
 
