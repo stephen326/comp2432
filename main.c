@@ -1,3 +1,8 @@
+/**
+ * This code has been integrated into interface.c.
+ * This file is provided for reference purposes only.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
