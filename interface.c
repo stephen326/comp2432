@@ -102,7 +102,7 @@ typedef struct {
 // a null Order
 Order nullOrder = {"NN", "NN", {0, 0, 0}, -1, "NN"};
 
-// a tombstone Order
+// a tombstone Order (only used for rejected orders)
 Order tombstoneOrder = {"XX", "XX", {0, 0, 0}, -2, "XX"};
 
 typedef struct {
@@ -117,6 +117,9 @@ typedef struct {
     Order order;
     int batchQty;
 } ProdBatch;
+
+// a null ProdBatch
+ProdBatch nullBatch = {-1, {"NN", "NN", {0, 0, 0}, -1, "NN"}, -1};
 
 typedef struct {
     Date date;
@@ -141,6 +144,11 @@ oneDaySchedule initSchedule(Date date, int factory) { // factory 0, 1, 2 for X, 
     } else {
         schedule.capacity = 0;
     }
+    // pad nullBatch to all batches
+    int i;
+    for (i = 0; i < CAPACITY; i++) {
+        schedule.batches[i] = nullBatch;
+    }
     return schedule;
 }
 
@@ -148,6 +156,15 @@ oneDaySchedule initSchedule(Date date, int factory) { // factory 0, 1, 2 for X, 
 void addProdBatch(oneDaySchedule* schedule, ProdBatch batch) {
     schedule->batches[schedule->batchCount] = batch;
     schedule->batchCount++;
+    schedule->batchQty += batch.batchQty;
+}
+
+ProdBatch sliceOrder2Batch(Order order, int batchNo, int batchQty) { // to slice an order into a batch
+    ProdBatch batch;
+    batch.batchNo = batchNo;
+    batch.order = order;
+    batch.batchQty = batchQty;
+    return batch;
 }
 
 // define a period struct to store period information
@@ -266,11 +283,116 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
     // 3. If Algorithm is FCFS:
     // PR 算法与 FCFS 实质相同，对于PR的实现可以先按照priority排序，然后按照FCFS的方式处理
 
+    // set a array for rejected orders
+    Order rejectedOrders[CAPACITY];
+    int rejectedCount = 0;
+    // pad nullOrder to rejected orders
+    for (i = 0; i < CAPACITY; i++) {
+        rejectedOrders[i] = nullOrder;
+    }
+
     if (strcmp(algorithm, "FCFS") == 0) {
         printf("Running PLS with FCFS algorithm\n");
 
-        // 先模拟填，如果填不进去，尝试填下一个订单。如果填进去了且不超过due，就实际填。
-        // 外层循环按天，内层循环按工厂
+        // 先模拟填，如果填不进去（多次切片之后依然过due），尝试填下一个订单。如果填进去了且不超过due，就实际填。
+        // 填入时间表按照每天的三个工厂，然后依次往后进行第二天第三天
+
+        int dayIndex = 0, factoryInDay = 0, batchNo = 0;
+        int SIMdayIndex = 0, SIMfactoryInDay = 0, SIMbatchNo = 0;
+        int orderIndex;
+        for (orderIndex = 0; orderIndex < CAPACITY; orderIndex++) {
+            if (todo.orders[orderIndex].qty == -1) { // if order is nullOrder, break
+                break;
+            }
+            int currentOrderScheduledQty = 0;
+            int SIMcurrentOrderScheduledQty = 0;
+            SIMdayIndex = dayIndex;
+            SIMfactoryInDay = factoryInDay; // reset simulation day and factory to current day and factory
+
+            int isOrderCanBeFulfilled = 0; // flag to check if the order can be fulfilled
+            // loop here to simulate the filling process
+            while (1) { // for every slot, try to fill the order
+                // if unexpected scheduled qty > order qty, raise error
+                if (SIMcurrentOrderScheduledQty > todo.orders[orderIndex].qty) {
+                    perror("unexpected error: scheduled qty > order qty");
+                    exit(1);
+                }
+                // if all slots are filled, reject current order
+                if (SIMdayIndex >= period.interval) {
+                    isOrderCanBeFulfilled = 0;
+                    break;
+                }
+                // if the date of current slot is later than due date, reject current order
+                if (datecmp(timetable[SIMfactoryInDay][SIMdayIndex].date, todo.orders[orderIndex].due) > 0) {
+                    isOrderCanBeFulfilled = 0;
+                    break;
+                }
+                // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
+                int isFinalBatch = (todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty <= timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
+                if (isFinalBatch) {
+                    // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty);
+                    SIMbatchNo++;
+                    // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
+                    SIMcurrentOrderScheduledQty = todo.orders[orderIndex].qty;
+                    isOrderCanBeFulfilled = 1;
+                    break;
+                } else {
+                    // if not, fill the slot with the remaining cap
+                    // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
+                    SIMbatchNo++;
+                    // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
+                    SIMcurrentOrderScheduledQty += timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty;
+                }
+                // if the slot is filled, move to the next slot
+                // if factory index is 2, move to the next day, or move to the next factory
+                if (SIMfactoryInDay == 2) {
+                    SIMfactoryInDay = 0;
+                    SIMdayIndex++;
+                } else {
+                    SIMfactoryInDay++;
+                }
+            }
+
+            //print out the simulation result
+            printf("Order %s simulation result: %d\n", todo.orders[orderIndex].orderNo, isOrderCanBeFulfilled);
+
+
+            // if simulation is successful, then actually fill the timetable (same process but plus actual filling)
+            if (isOrderCanBeFulfilled == 1) {
+                // actual filling process (only consider actual pointers)
+                while (1) { // for every slot, try to fill the order
+                // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
+                int isFinalBatch = (todo.orders[orderIndex].qty - currentOrderScheduledQty <= timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
+                if (isFinalBatch) {
+                    ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, todo.orders[orderIndex].qty - currentOrderScheduledQty);
+                    batchNo++;
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
+                    currentOrderScheduledQty = todo.orders[orderIndex].qty;
+                    break;
+                } else {
+                    // if not, fill the slot with the remaining cap
+                    ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
+                    batchNo++;
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
+                    currentOrderScheduledQty += timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty;
+                }
+                // if the slot is filled, move to the next slot
+                // if factory index is 2, move to the next day, or move to the next factory
+                if (factoryInDay == 2) {
+                    factoryInDay = 0;
+                    dayIndex++;
+                } else {
+                    factoryInDay++;
+                }
+                }
+            } else {
+                // if not, add the order to rejected list
+                rejectedOrders[rejectedCount] = todo.orders[orderIndex];
+                rejectedCount++;
+            }
+        }
+
+
         
 
     } // 结束结果应当为一个填好的timetable，以及一个rejected orders list
@@ -304,6 +426,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
             childPids[i] = cpid;
         }
     }
+
 
     if (getppid() == root) {
         ////////////////////////// PARENT RUN THIS //////////////////////////
