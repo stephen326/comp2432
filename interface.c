@@ -516,7 +516,33 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         fprintf(file, "%s", report);
         fclose(file);
 
-        // 此外，Parent 应当等待所有child完成后，将所有的rejected orders list合并（如有从Child得到的update），然后输出到output file
+        // output rejected orders files
+        /*文件名:"rejected_orders.txt"
+        格式如下：
+
+        P0001\n
+        P0006\n
+        P0045\n
+        P0009\n
+        P0020\n
+        rejected\n
+
+        */
+        file = fopen("rejected_orders.txt", "w");
+        if (file == NULL) {
+            perror("Error opening file");
+            exit(1);
+        }
+        for (i = 0; i < CAPACITY; i++) {
+            if (strcmp(rejectedOrders[i].orderNo, "NN") == 0) {
+                break;
+            }
+            fprintf(file, "%s\n", rejectedOrders[i].orderNo);
+        }
+        fprintf(file, "rejected\n");
+        fclose(file);
+        
+
 
 
         ///////////////// PARENT LOGIC END ////////////////////
