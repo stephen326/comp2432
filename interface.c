@@ -9,7 +9,7 @@
 #define NUMBER_OF_CHILD 3
 #define READY "R" // student can send this signal to parent to state that he finish on receive 
 #define END "E" // END game signal
-#define CAPACITY 100 // maximum number of orders to be handled
+#define CAPACITY 110 // maximum number of orders to be handled
 #define PRODUCTIVITY_X 300
 #define PRODUCTIVITY_Y 400
 #define PRODUCTIVITY_Z 500
