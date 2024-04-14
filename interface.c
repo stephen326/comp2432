@@ -920,7 +920,7 @@ int main() {
     char input[100];
     char command[20];
     char arg1[20], arg2[20], arg3[20], arg4[20];
-    char algorithm[20] = "PLEASE INPUT ALGORITHM"; // for testing only // MARK: TEST VALUE
+    char algorithm[20] = "alg"; // for testing only // MARK: TEST VALUE
     char outputFileName[20] = "output.txt"; // for testing only // MARK: TEST VALUE
     char batchFile[20];
 
