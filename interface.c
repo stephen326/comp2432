@@ -154,6 +154,14 @@ oneDaySchedule initSchedule(Date date, int factory) { // factory 0, 1, 2 for X, 
 
 // add batch to schedule
 void addProdBatch(oneDaySchedule* schedule, ProdBatch batch) {
+    if (schedule == NULL) {
+    perror("Schedule pointer is NULL");
+    exit(EXIT_FAILURE);
+    }
+    if (schedule->batchCount >= CAPACITY) {
+        printf("Error: Reached maximum capacity\n");
+        return;
+    }
     schedule->batches[schedule->batchCount] = batch;
     schedule->batchCount++;
     schedule->batchQty += batch.batchQty;
@@ -373,8 +381,8 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
                     // if not, fill the slot with the remaining cap
                     ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
                     batchNo++;
-                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
                     currentOrderScheduledQty += timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty;
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
                 }
                 // if the slot is filled, move to the next slot
                 // if factory index is 2, move to the next day, or move to the next factory
