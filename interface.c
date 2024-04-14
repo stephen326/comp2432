@@ -814,17 +814,17 @@ void addOrder(char orderNumber[], char dueDate[], int quantity, char productName
         return;
     }
 
-    // 检查截止日期是否超出范围
-    if (strcmp(dueDate, endDate) > 0) {
-        printf("Due date exceeds the specified period\n");
-        return;
-    }
+    // // 检查截止日期是否超出范围
+    // if (strcmp(dueDate, endDate) > 0) {
+    //     printf("Due date exceeds the specified period\n");
+    //     return;
+    // }
 
-    // 检查分类文件中是否存在相同的订单号
-    if (checkDuplicate(fileName, orderNumber)) {
-        printf("Order with the same order number already exists in %s\n", fileName);
-        return;
-    }
+    // // 检查分类文件中是否存在相同的订单号
+    // if (checkDuplicate(fileName, orderNumber)) {
+    //     printf("Order with the same order number already exists in %s\n", fileName);
+    //     return;
+    // }
 
     // 打开分类文件以追加模式写入
     file = fopen(fileName, "a");
