@@ -1333,16 +1333,40 @@ void addPeriod(char startDate[], char endDate[]) {
 }
 
 
+//------------------------------------------------------以前有问题的
+// int checkDuplicate(char fileName[], char orderNumber[]) {
+//     FILE *file = fopen(fileName, "r");
+//     if (file == NULL) {
+//         return 0; // 文件不存在，不存在重复
+//     }
+
+//     char line[100];
+//     while (fgets(line, sizeof(line), file)) {
+//         char *token = strtok(line, " ");
+//         if (token != NULL && strcmp(token, orderNumber) == 0) {
+//             fclose(file);
+//             return 1; // 存在重复
+//         }
+//     }
+//     fclose(file);
+//     return 0; // 不存在重复
+// }
+
 int checkDuplicate(char fileName[], char orderNumber[]) {
-    FILE *file = fopen(fileName, "r");
+    FILE* file = fopen(fileName, "r");
     if (file == NULL) {
         return 0; // 文件不存在，不存在重复
     }
 
     char line[100];
     while (fgets(line, sizeof(line), file)) {
-        char *token = strtok(line, " ");
-        if (token != NULL && strcmp(token, orderNumber) == 0) {
+        // 提取每行的订单号部分（前五个字符）
+        char existingOrderNumber[6];
+        strncpy(existingOrderNumber, line, 5);
+        existingOrderNumber[5] = '\0';
+
+        // 比较订单号是否相同
+        if (strcmp(existingOrderNumber, orderNumber) == 0) {
             fclose(file);
             return 1; // 存在重复
         }
@@ -1386,17 +1410,11 @@ void addOrder(char orderNumber[], char dueDate[], int quantity, char productName
         return;
     }
 
-    // // 检查截止日期是否超出范围
-    // if (strcmp(dueDate, endDate) > 0) {
-    //     printf("Due date exceeds the specified period\n");
-    //     return;
-    // }
-
     // 检查分类文件中是否存在相同的订单号
-    if (checkDuplicate(fileName, orderNumber)) {
-        printf("Order with the same order number already exists in %s\n", fileName);
-        return;
-    }
+    if (checkDuplicate("All_Orders.txt", orderNumber)) {
+    printf("Order with the same order number already exists in All_Orders.txt\n");
+    return;
+}
 
     // 打开分类文件以追加模式写入
     file = fopen(fileName, "a");
@@ -1418,6 +1436,7 @@ void addOrder(char orderNumber[], char dueDate[], int quantity, char productName
     fprintf(file, "%s %s %d %s\n", orderNumber, dueDate, quantity, productName);
     fclose(file);
 }
+
 
 
 
