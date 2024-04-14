@@ -47,8 +47,8 @@ typedef struct {
 Order orders[MAX_ORDERS]; // 存储所有订单
 
 
-// 计算文件中的订单数量
-int countOrdersInFile(const char *filename) {
+// 计算文件中有数据的行数
+int countLinesWithData(const char *filename) {
     FILE *file = fopen(filename, "r");
     if (!file) {
         perror("Error opening file");
@@ -56,11 +56,13 @@ int countOrdersInFile(const char *filename) {
     }
 
     int count = 0;
-    char buffer[100000];
-    while (fgets(buffer, 100000, file)) {
-        // 检查是否至少读取了订单号部分
-        char dummy;
-        if (sscanf(buffer, "%*s %*s %*d %c", &dummy) == 1) {
+    char buffer[1024]; // 假定一行不会超过1024个字符，更适合一般的文本处理
+
+    while (fgets(buffer, sizeof(buffer), file)) {
+        // 使用strspn来跳过前导空白字符
+        int index = strspn(buffer, " \t\n\r");
+        // 确保这一行在去除前导空格后不是空的（即有数据的）
+        if (buffer[index] != '\0' && buffer[index] != '\n') {
             count++;
         }
     }
@@ -68,11 +70,10 @@ int countOrdersInFile(const char *filename) {
     fclose(file);
     return count;
 }
-
 // 计算接受的订单数量
 int countAcceptedOrders(const char *allOrdersFile, const char *rejectedOrdersFile) {
-    int totalOrders = countOrdersInFile(allOrdersFile);
-    int rejectedOrders = countOrdersInFile(rejectedOrdersFile);
+    int totalOrders = countLinesWithData(allOrdersFile);
+    int rejectedOrders = countLinesWithData(rejectedOrdersFile);
 
     if (totalOrders == -1 || rejectedOrders == -1) {
         // 发生错误时返回-1
