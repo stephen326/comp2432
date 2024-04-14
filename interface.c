@@ -563,7 +563,7 @@ void executeMainPLS(char algorithm[]) {
         fclose(file);
 
         // output rejected orders files
-        /*文件名:"rejected_orders.txt"
+        /*文件名:"rejected_orders.dat"
         格式如下：
 
         P0001\n
@@ -575,7 +575,7 @@ void executeMainPLS(char algorithm[]) {
 
         */
         // delete the file if exists
-        FILE *file2 = fopen("rejected_orders.txt", "w");
+        FILE *file2 = fopen("rejected_orders.dat", "w");
         file2 = fopen("rejected_orders.dat", "w");
         if (file2 == NULL) {
             perror("Error opening file");
@@ -1301,6 +1301,11 @@ int analysis(char algorithm[], char outputFileName[]) {
 	
 
     writeFinal3(outputFileName);
+
+    // reset orderCount3
+    orderCount3 = 0;
+    // clear the orders3 array
+    memset(orders3, 0, sizeof(orders3));
 
     return 0;
 }
