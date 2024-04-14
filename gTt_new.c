@@ -8,24 +8,24 @@
 #define MAX_ORDER_NUM 1000
 #define MAX_REJECTED 2000 // Define the maximum number of rejected orders
 
-int total_days = 0; // 定义工厂的生产天数
-int total_quantity = 0; // 定义工厂的生产数量
+int total_days3 = 0; // 定义工厂的生产天数
+int total_quantity3 = 0; // 定义工厂的生产数量
 
-int total_days_X = 0; // 定义工厂X的生产天数
-int total_quantity_X = 0; // 定义工厂X的生产数量
+int total_days3_X = 0; // 定义工厂X的生产天数
+int total_quantity3_X = 0; // 定义工厂X的生产数量
 
-int total_days_Y = 0; // 定义工厂Y的生产天数
-int total_quantity_Y = 0; // 定义工厂Y的生产数量
+int total_days3_Y = 0; // 定义工厂Y的生产天数
+int total_quantity3_Y = 0; // 定义工厂Y的生产数量
 
-int total_days_Z = 0; // 定义工厂Z的生产天数
-int total_quantity_Z = 0; // 定义工厂Z的生产数量
+int total_days3_Z = 0; // 定义工厂Z的生产天数
+int total_quantity3_Z = 0; // 定义工厂Z的生产数量
 
 
 #define DATE_LENGTH 11 // Date size including null terminator
 #define MAX_PRODUCT_NAME 50 // Product name size
 
 
-int orderCount = 0; // 已存储的订单数量
+int orderCount3 = 0; // 已存储的订单数量
 
 typedef struct {
     char productName[50]; // 产品名
@@ -34,7 +34,7 @@ typedef struct {
     char orderNumber[10]; // 订单编号
     int quantity;         // 订单数量
     char dueDate[11];     // 结束日期，格式为 YYYY-MM-DD
-} Order;
+} Order3;
 
 // Rejected order structure
 typedef struct {
@@ -42,9 +42,9 @@ typedef struct {
     char date[DATE_LENGTH];
     int quantity;
     char productName[MAX_PRODUCT_NAME];
-} Rejected_Order;
+} Rejected_Order3;
 
-Order orders[MAX_ORDERS]; // 存储所有订单
+Order3 orders3[MAX_ORDERS]; // 存储所有订单
 
 
 // 计算文件中有数据的行数
@@ -109,15 +109,15 @@ int writeReportHeader(const char *algorithmName, int acceptedOrders) {
 }
 
 // 添加订单
-void addOrder(const char* plantName, const char* productName, const char* startDate, const char* orderNumber, int quantity, const char* dueDate) {
-    if (orderCount < MAX_ORDERS) {
-        strcpy(orders[orderCount].productName, productName);
-        strcpy(orders[orderCount].plantName, plantName);
-        strcpy(orders[orderCount].startDate, startDate);
-        strcpy(orders[orderCount].orderNumber, orderNumber);
-        orders[orderCount].quantity = quantity;
-        strcpy(orders[orderCount].dueDate, dueDate);
-        orderCount++;
+void addOrder3(const char* plantName, const char* productName, const char* startDate, const char* orderNumber, int quantity, const char* dueDate) {
+    if (orderCount3 < MAX_ORDERS) {
+        strcpy(orders3[orderCount3].productName, productName);
+        strcpy(orders3[orderCount3].plantName, plantName);
+        strcpy(orders3[orderCount3].startDate, startDate);
+        strcpy(orders3[orderCount3].orderNumber, orderNumber);
+        orders3[orderCount3].quantity = quantity;
+        strcpy(orders3[orderCount3].dueDate, dueDate);
+        orderCount3++;
     }
 }
 
@@ -173,7 +173,7 @@ void processOrders(const char* filename) {
         if (sscanf(line, "%10s | %49s | %9s | %d | %10s", startDate, productName, orderNumber, &quantity, dueDate) == 5) {
             
 
-	 	addOrder(plantName, productName, startDate, orderNumber, quantity, dueDate);
+	 	addOrder3(plantName, productName, startDate, orderNumber, quantity, dueDate);
 	
         }
     }
@@ -186,8 +186,8 @@ void processOrders(const char* filename) {
 
 // 比较两个订单，首先按订单号排序，如果订单号相同则按工厂名排序
 int compareOrders(const void *a, const void *b) {
-    const Order *orderA = (const Order *)a;
-    const Order *orderB = (const Order *)b;
+    const Order3 *orderA = (const Order3 *)a;
+    const Order3 *orderB = (const Order3 *)b;
     int orderCompare = strcmp(orderA->orderNumber, orderB->orderNumber);
     if (orderCompare == 0) { // 如果订单号相同，比较工厂名
         return strcmp(orderA->plantName, orderB->plantName);
@@ -197,13 +197,13 @@ int compareOrders(const void *a, const void *b) {
 
 // 冒泡排序算法，根据订单号和工厂名排序
 void sortOrders() {
-    for (int i = 0; i < orderCount - 1; ++i) {
-        for (int j = 0; j < orderCount - i - 1; ++j) {
-            if (compareOrders(&orders[j], &orders[j + 1]) > 0) {
+    for (int i = 0; i < orderCount3 - 1; ++i) {
+        for (int j = 0; j < orderCount3 - i - 1; ++j) {
+            if (compareOrders(&orders3[j], &orders3[j + 1]) > 0) {
                 // 交换订单
-                Order temp = orders[j];
-                orders[j] = orders[j + 1];
-                orders[j + 1] = temp;
+                Order3 temp = orders3[j];
+                orders3[j] = orders3[j + 1];
+                orders3[j + 1] = temp;
             }
         }
     }
@@ -212,9 +212,9 @@ void sortOrders() {
 // 函数用于在 orderCounts 数组中查找特定的订单号和工厂名
 // 如果找到则返回索引，否则返回 -1
 int findOrderCount(const char* orderNumber, const char* plantName) {
-    for (int i = 0; i < orderCount; i++) {
-        if (strcmp(orders[i].orderNumber, orderNumber) == 0 &&
-            strcmp(orders[i].plantName, plantName) == 0) {
+    for (int i = 0; i < orderCount3; i++) {
+        if (strcmp(orders3[i].orderNumber, orderNumber) == 0 &&
+            strcmp(orders3[i].plantName, plantName) == 0) {
             return i;
         }
     }
@@ -231,7 +231,7 @@ int calculate_total_days_in_file(const char *filename) {
 
     struct tm start_tm = {0}, end_tm = {0};
     char start_date[11], end_date[11];
-    int total_days = 0, days;
+    int total_days3 = 0, days;
     time_t start_time, end_time;
 
     while (fscanf(file, "%10s %10s", start_date, end_date) == 2) {
@@ -259,49 +259,49 @@ int calculate_total_days_in_file(const char *filename) {
         days = (int)difftime(end_time, start_time) / (24 * 3600) + 1;
 
         // 累加到总天数
-        total_days += days;
+        total_days3 += days;
     }
 
     fclose(file);
-    return total_days;
+    return total_days3;
 }
 
 
 // 我不确定total day是什么意思。///////////////////////////////////////////////////////
-void writeFinal(const char* filename){
+void writeFinal3(const char* filename){
 	FILE *file = fopen(filename, "a");
 	if (file == NULL) {
         	printf("Error opening file to write!\n");
         	return;
     	}
 	const char *period = "periods.txt";
-    	int total_days = calculate_total_days_in_file(period);
+    	int total_days3 = calculate_total_days_in_file(period);
 
 
 	fprintf(file,"***PERFORMANCE\n\n");
 	fprintf(file,"Plant_X:\n");
-	fprintf(file,"\t\tNumber of days in use:                    \t%3d days\n", total_days_X);
-	fprintf(file,"\t\tNumber of products produced:       %6d (in total)\n", total_quantity_X);
+	fprintf(file,"\t\tNumber of days in use:                    \t%3d days\n", total_days3_X);
+	fprintf(file,"\t\tNumber of products produced:       %6d (in total)\n", total_quantity3_X);
 	// 确保至少一个数是浮点数，并且Utilization格式为??.? %
-        float utilization1 = (total_days_X > 0) ? ((float)total_quantity_X / (total_days*300)) * 100 : 0.0f;
+        float utilization1 = (total_days3_X > 0) ? ((float)total_quantity3_X / (total_days3*300)) * 100 : 0.0f;
         fprintf(file, "\t\tUtilization of the plant:                     %5.1f %%\n\n", utilization1);
 
 
 	fprintf(file,"Plant_Y:\n");
-	fprintf(file,"\t\tNumber of days in use:                    \t%3d days\n", total_days_Y);
-	fprintf(file,"\t\tNumber of products produced:       %6d (in total)\n",total_quantity_Y);
+	fprintf(file,"\t\tNumber of days in use:                    \t%3d days\n", total_days3_Y);
+	fprintf(file,"\t\tNumber of products produced:       %6d (in total)\n",total_quantity3_Y);
 	// 确保至少一个数是浮点数，并且Utilization格式为??.? %
-        float utilization2 = (total_days_Y > 0) ? ((float)total_quantity_Y / (total_days*400)) * 100 : 0.0f;
+        float utilization2 = (total_days3_Y > 0) ? ((float)total_quantity3_Y / (total_days3*400)) * 100 : 0.0f;
         fprintf(file, "\t\tUtilization of the plant:                     %5.1f %%\n\n", utilization2);
 
 	fprintf(file,"Plant_Z:\n");
-	fprintf(file,"\t\tNumber of days in use:                    \t%3d days\n", total_days_Z);
-	fprintf(file,"\t\tNumber of products produced:       %6d (in total)\n", total_quantity_Z);
+	fprintf(file,"\t\tNumber of days in use:                    \t%3d days\n", total_days3_Z);
+	fprintf(file,"\t\tNumber of products produced:       %6d (in total)\n", total_quantity3_Z);
 	// 确保至少一个数是浮点数，并且Utilization格式为??.? %
-        float utilization3 = (total_days_Z > 0) ? ((float)total_quantity_Z / (total_days*500)) * 100 : 0.0f;
+        float utilization3 = (total_days3_Z > 0) ? ((float)total_quantity3_Z / (total_days3*500)) * 100 : 0.0f;
         fprintf(file, "\t\tUtilization of the plant:                     %5.1f %%\n\n", utilization3);
 	
-	float utilization4 = (total_days > 0) ? ((float)total_quantity / (total_days*1200)) * 100 : 0.0f;
+	float utilization4 = (total_days3 > 0) ? ((float)total_quantity3 / (total_days3*1200)) * 100 : 0.0f;
 	fprintf(file,"Overall of utilization:\t\t\t\t\t %5.1f %%\n\n", utilization4);
 	
 	pclose(file);
@@ -327,9 +327,9 @@ void writeOrdersToFile(const char* filename) {
         return;
     }
     
-    for (int i = 0; i < orderCount; i++) {
+    for (int i = 0; i < orderCount3; i++) {
 	// 判断orderNumber是否为"N/A"，如果不是"N/A"，则添加订单到数组
-	Order order = orders[i];
+	Order3 order = orders3[i];
         if (strcmp(order.orderNumber, "N/A") != 0) {
         int occurrences = 1;
         
@@ -339,34 +339,34 @@ void writeOrdersToFile(const char* filename) {
 	int days = 1;
 
         // Check for duplicate orders and calculate occurrences
-        for (int j = i + 1; j < orderCount; ++j) {
-            if (strcmp(order.plantName, orders[j].plantName) == 0 && strcmp(order.orderNumber, orders[j].orderNumber) == 0) {
+        for (int j = i + 1; j < orderCount3; ++j) {
+            if (strcmp(order.plantName, orders3[j].plantName) == 0 && strcmp(order.orderNumber, orders3[j].orderNumber) == 0) {
                 
 			occurrences++;	
-			quantity += orders[j].quantity;
+			quantity += orders3[j].quantity;
 			
 			days += 1;
             }
         }
          
-        total_quantity += quantity;
-	total_days += days;
+        total_quantity3 += quantity;
+	total_days3 += days;
 	if(strcmp(str1,order.plantName) == 0){
-		 total_quantity_X += quantity;
-		 total_days_X += days;
+		 total_quantity3_X += quantity;
+		 total_days3_X += days;
 	}if(strcmp(str2,order.plantName) == 0){
-		 total_quantity_Y += quantity;
-		 total_days_Y += days;
+		 total_quantity3_Y += quantity;
+		 total_days3_Y += days;
 	}if(strcmp(str3,order.plantName) == 0){
-		 total_quantity_Z += quantity;
-		 total_days_Z += days;
+		 total_quantity3_Z += quantity;
+		 total_days3_Z += days;
 	}
 	
         // Write order information
         fprintf(file, "%-8s\t\t\t %-10s\t %-10s\t\t %-2d\t\t %-6d \t\t%-8s\n",
                 order.orderNumber,
                 order.startDate,
-                orders[start + occurrences - 1].startDate, // Assuming this is the correct due date
+                orders3[start + occurrences - 1].startDate, // Assuming this is the correct due date
                 occurrences,
                 quantity,
                 order.plantName);
@@ -391,11 +391,11 @@ void appendReportWithRejectedCount(const char *rejectedOrdersFile, const char *r
     char line[1024];
 
     if (!rejectedFile) {
-        perror("Error opening rejected_orders.txt");
+        perror("Error opening rejected_orders.dat");
         exit(1);
     }
 
-    // 计算rejected_orders.txt文件中的行数
+    // 计算rejected_orders.dat文件中的行数
     while (fgets(line, sizeof(line), rejectedFile)) {
         rejectedCount++;
     }
@@ -420,14 +420,14 @@ void appendReportWithRejectedCount(const char *rejectedOrdersFile, const char *r
 int processRejectedOrders(const char *rejectedOrdersFile, const char *allOrdersFilePath, const char *reportFilePath) {
    // Arrays to store the order numbers and the rejected orders
     char rejectedOrderNumbers[MAX_REJECTED][DATE_LENGTH];
-    Rejected_Order rejectedArr[MAX_REJECTED];
+    Rejected_Order3 rejectedArr[MAX_REJECTED];
    int rejectedCount = 0;
    
    
     // Open the file containing the rejected order numbers
     FILE *rejectedFile = fopen(rejectedOrdersFile, "r");
     if (!rejectedFile) {
-        perror("Error opening rejected_orders.txt");
+        perror("Error opening rejected_orders.dat");
         return 1; // 返回错误代码
     }
 
@@ -504,18 +504,22 @@ int processRejectedOrders(const char *rejectedOrdersFile, const char *allOrdersF
 // const char* file1, const char* file2, const char* file3, const char* rejectionFile
 int main() {
     FILE *reportFile;
+
+    // delete the file if it exists
+    remove("Report.txt");
+
     int acceptedOrders = 0; // 你需要根据实际情况来计算接受的订单数量
     
     processOrders("Plant_X.dat");
     processOrders("Plant_Y.dat");
     processOrders("Plant_Z.dat");
 	
-    qsort(orders, orderCount, sizeof(Order), compareOrders);
+    qsort(orders3, orderCount3, sizeof(Order3), compareOrders);
     
     // 假设这是你的算法名称和已接受的订单数
     const char *algorithmName = "YourAlgorithmName";
     const char *allOrdersFile = "All_Orders.txt";
-    const char *rejectedOrdersFile = "rejected_orders.txt";
+    const char *rejectedOrdersFile = "rejected_orders.dat";
 
     acceptedOrders = countAcceptedOrders(allOrdersFile, rejectedOrdersFile);
     
@@ -528,10 +532,11 @@ int main() {
 
     // TODO: 在这里添加写入具体的订单数据的代码
     writeOrdersToFile("Report.txt");
-    appendReportWithRejectedCount("rejected_orders.txt", "Report.txt");
-    processRejectedOrders("rejected_orders.txt", "All_Orders.txt", "Report.txt");
+    appendReportWithRejectedCount("rejected_orders.dat", "Report.txt");
+    processRejectedOrders("rejected_orders.dat", "All_Orders.txt", "Report.txt");
 	
-    writeFinal("Report.txt");
+
+    writeFinal3("Report.txt");
 
     return 0;
 }

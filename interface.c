@@ -573,8 +573,10 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         rejected\n
 
         */
-        file = fopen("rejected_orders.txt", "w");
-        if (file == NULL) {
+        // delete the file if exists
+        FILE *file2 = fopen("rejected_orders.txt", "w");
+        file2 = fopen("rejected_orders.dat", "w");
+        if (file2 == NULL) {
             perror("Error opening file");
             exit(1);
         }
@@ -582,10 +584,10 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
             if (strcmp(rejectedOrders[i].orderNo, "NN") == 0) {
                 break;
             }
-            fprintf(file, "%s\n", rejectedOrders[i].orderNo);
+            fprintf(file2, "%s\n", rejectedOrders[i].orderNo);
         }
-        fprintf(file, "rejected\n");
-        fclose(file);
+        fprintf(file2, "rejected\n");
+        fclose(file2);
 
 
 
