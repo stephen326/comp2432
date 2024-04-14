@@ -243,6 +243,12 @@ void readTodo(Todo* todo) {
 void executeMainPLS(char algorithm[], char outputFileName[]) {
     int i = 0, n = 0; // loop variables
 
+    // if algorithm is not FCFS or PR, raise error
+    if (strcmp(algorithm, "FCFS") != 0 && strcmp(algorithm, "PR") != 0) {
+        perror("Invalid algorithm");
+        exit(1);
+    }
+
     /*
     1.
     before running PLS, we need to read the orders and period from the files
@@ -417,7 +423,10 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
 
 
 
-    } // 结束结果应当为一个填好的timetable，以及一个rejected orders list
+    } 
+    
+    
+    // 结束结果应当为一个填好的timetable，以及一个rejected orders list //
 
     // testing: print out the timetable (only the slot not empty) (also note which order is the batch from and batch qty)
     // order by batch number (Day0 (fac0 -> fac1 -> fac2), Day1 (fac0 -> fac1 -> fac2), ...
@@ -508,7 +517,10 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         }
 
         // write report to output file, if exists, overwrite
-        FILE *file = fopen(outputFileName, "w");
+        char outputFileNameSchedule[20] = "overall_schedule.txt";
+        // delete the file if exists
+        remove(outputFileNameSchedule);
+        FILE *file = fopen(outputFileNameSchedule, "w");
         if (file == NULL) {
             perror("Error opening file");
             exit(1);
@@ -541,7 +553,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         }
         fprintf(file, "rejected\n");
         fclose(file);
-        
+
 
 
 
@@ -683,12 +695,14 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         // write report to file named Plant_X.txt (if already exists, overwrite)
         char fileName[20];
         if (myIndex == 0) {
-            strcpy(fileName, "Plant_X.txt");
+            strcpy(fileName, "Plant_X.dat");
         } else if (myIndex == 1) {
-            strcpy(fileName, "Plant_Y.txt");
+            strcpy(fileName, "Plant_Y.dat");
         } else if (myIndex == 2) {
-            strcpy(fileName, "Plant_Z.txt");
+            strcpy(fileName, "Plant_Z.dat");
         }
+        // delete the file if exists
+        remove(fileName);
         FILE *file = fopen(fileName, "w");
         if (file == NULL) {
             perror("Error opening file");
@@ -705,10 +719,6 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         sprintf(reportMsg, "\n-----------------------------------------------------------------------------\nReport from Child %d\n", myIndex);
         strcat(reportMsg, report);
         write(c2pPipe[myIndex][1], reportMsg, sizeof(reportMsg));
-
-
-
-
 
 
         ///////////////// CHILD LOGIC END ////////////////////
