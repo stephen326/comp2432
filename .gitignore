@@ -10,3 +10,6 @@ periods.txt
 *.txt
 /out/
 periods.txt
+Plant_X.dat
+Plant_Y.dat
+Plant_Z.dat

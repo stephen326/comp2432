@@ -118,6 +118,7 @@ typedef struct {
     Order priority_1[CAPACITY]; // array of orders with priorities
     Order priority_2[CAPACITY];
     Order priority_3[CAPACITY];
+    Order orders_priority[CAPACITY * 3]; // array of orders with priorities
 } Todo;
 
 typedef struct {
@@ -238,6 +239,35 @@ void readTodo(Todo* todo) {
     readOrders("Category_1.txt", todo->priority_1, CAPACITY);
     readOrders("Category_2.txt", todo->priority_2, CAPACITY);
     readOrders("Category_3.txt", todo->priority_3, CAPACITY);
+    // add 3 categories to orders_priority follows order: [Cat1] [Cat2] [Cat3]. 非nullOrder的部分首尾相接
+    int i;
+    int ii; // index for orders_priority
+    for (i = 0; i < CAPACITY; i++) {
+        if (strcmp(todo->priority_1[i].orderNo, "NN") != 0) {
+            todo->orders_priority[ii] = todo->priority_1[i];
+            ii++;
+        }
+    }
+    for (i = 0; i < CAPACITY; i++) {
+        if (strcmp(todo->priority_2[i].orderNo, "NN") != 0) {
+            todo->orders_priority[ii] = todo->priority_2[i];
+            ii++;
+        }
+    }
+    for (i = 0; i < CAPACITY; i++) {
+        if (strcmp(todo->priority_3[i].orderNo, "NN") != 0) {
+            todo->orders_priority[ii] = todo->priority_3[i];
+            ii++;
+        }
+    }
+}
+
+void usePRList(Todo* todo) {
+    // use priority list to replace orders list
+    int i;
+    for (i = 0; i < CAPACITY; i++) {
+        todo->orders[i] = todo->orders_priority[i];
+    }
 }
 
 void executeMainPLS(char algorithm[], char outputFileName[]) {
@@ -265,6 +295,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         todo.priority_1[i] = nullOrder;
         todo.priority_2[i] = nullOrder;
         todo.priority_3[i] = nullOrder;
+        todo.orders_priority[i] = nullOrder;
     }
     readTodo(&todo);
     // testing to print out orders' No until nullOrder /////////////////////////
@@ -315,115 +346,117 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
 
     if (strcmp(algorithm, "FCFS") == 0) {
         printf("Running PLS with FCFS algorithm\n");
+    } else if (strcmp(algorithm, "PR") == 0) {
+        printf("Running PLS with PR algorithm\n");
+        usePRList(&todo);
+    } else {
+        perror("Invalid algorithm");
+        exit(1);
+    }
 
-        // 先模拟填，如果填不进去（多次切片之后依然过due），尝试填下一个订单。如果填进去了且不超过due，就实际填。
-        // 填入时间表按照每天的三个工厂，然后依次往后进行第二天第三天
+    // 先模拟填，如果填不进去（多次切片之后依然过due），尝试填下一个订单。如果填进去了且不超过due，就实际填。
+    // 填入时间表按照每天的三个工厂，然后依次往后进行第二天第三天
 
-        int dayIndex = 0, factoryInDay = 0, batchNo = 0;
-        int SIMdayIndex = 0, SIMfactoryInDay = 0, SIMbatchNo = 0;
-        int orderIndex;
-        for (orderIndex = 0; orderIndex < CAPACITY; orderIndex++) {
-            if (todo.orders[orderIndex].qty == -1) { // if order is nullOrder, break
+    int dayIndex = 0, factoryInDay = 0, batchNo = 0;
+    int SIMdayIndex = 0, SIMfactoryInDay = 0, SIMbatchNo = 0;
+    int orderIndex;
+    for (orderIndex = 0; orderIndex < CAPACITY; orderIndex++) {
+        if (todo.orders[orderIndex].qty == -1) { // if order is nullOrder, break
+            break;
+        }
+        int currentOrderScheduledQty = 0;
+        int SIMcurrentOrderScheduledQty = 0;
+        SIMdayIndex = dayIndex;
+        SIMfactoryInDay = factoryInDay; // reset simulation day and factory to current day and factory
+
+        int isOrderCanBeFulfilled = 0; // flag to check if the order can be fulfilled
+        // loop here to simulate the filling process
+        while (1) { // for every slot, try to fill the order
+            // if unexpected scheduled qty > order qty, raise error
+            if (SIMcurrentOrderScheduledQty > todo.orders[orderIndex].qty) {
+                perror("unexpected error: scheduled qty > order qty");
+                exit(1);
+            }
+            // if all slots are filled, reject current order
+            if (SIMdayIndex >= period.interval) {
+                isOrderCanBeFulfilled = 0;
                 break;
             }
-            int currentOrderScheduledQty = 0;
-            int SIMcurrentOrderScheduledQty = 0;
-            SIMdayIndex = dayIndex;
-            SIMfactoryInDay = factoryInDay; // reset simulation day and factory to current day and factory
-
-            int isOrderCanBeFulfilled = 0; // flag to check if the order can be fulfilled
-            // loop here to simulate the filling process
-            while (1) { // for every slot, try to fill the order
-                // if unexpected scheduled qty > order qty, raise error
-                if (SIMcurrentOrderScheduledQty > todo.orders[orderIndex].qty) {
-                    perror("unexpected error: scheduled qty > order qty");
-                    exit(1);
-                }
-                // if all slots are filled, reject current order
-                if (SIMdayIndex >= period.interval) {
-                    isOrderCanBeFulfilled = 0;
-                    break;
-                }
-                // if the date of current slot is later than due date, reject current order
-                if (datecmp(timetable[SIMfactoryInDay][SIMdayIndex].date, todo.orders[orderIndex].due) > 0) {
-                    isOrderCanBeFulfilled = 0;
-                    break;
-                }
-                // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
-                int isFinalBatch = (todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty <= timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
-                if (isFinalBatch) {
-                    // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty);
-                    SIMbatchNo++;
-                    // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Should check same product)
-                    SIMcurrentOrderScheduledQty = todo.orders[orderIndex].qty;
-                    isOrderCanBeFulfilled = 1;
-                    break;
-                } else {
-                    // if not, fill the slot with the remaining cap
-                    // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
-                    SIMbatchNo++;
-                    // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Should check same product)
-                    SIMcurrentOrderScheduledQty += timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty;
-                }
-                // if the slot is filled, move to the next slot
-                // if factory index is 2, move to the next day, or move to the next factory
-                if (SIMfactoryInDay == 2) {
-                    SIMfactoryInDay = 0;
-                    SIMdayIndex++;
-                } else {
-                    SIMfactoryInDay++;
-                }
+            // if the date of current slot is later than due date, reject current order
+            if (datecmp(timetable[SIMfactoryInDay][SIMdayIndex].date, todo.orders[orderIndex].due) > 0) {
+                isOrderCanBeFulfilled = 0;
+                break;
             }
+            // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
+            int isFinalBatch = (todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty <= timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
+            if (isFinalBatch) {
+                // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty);
+                SIMbatchNo++;
+                // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Should check same product)
+                SIMcurrentOrderScheduledQty = todo.orders[orderIndex].qty;
+                isOrderCanBeFulfilled = 1;
+                break;
+            } else {
+                // if not, fill the slot with the remaining cap
+                // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
+                SIMbatchNo++;
+                // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Should check same product)
+                SIMcurrentOrderScheduledQty += timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty;
+            }
+            // if the slot is filled, move to the next slot
+            // if factory index is 2, move to the next day, or move to the next factory
+            if (SIMfactoryInDay == 2) {
+                SIMfactoryInDay = 0;
+                SIMdayIndex++;
+            } else {
+                SIMfactoryInDay++;
+            }
+        }
 
-            //print out the simulation result
-            printf("Order %s simulation result: %d\n", todo.orders[orderIndex].orderNo, isOrderCanBeFulfilled);
+        //print out the simulation result
+        printf("Order %s simulation result: %d\n", todo.orders[orderIndex].orderNo, isOrderCanBeFulfilled);
 
 
-            // if simulation is successful, then actually fill the timetable (same process but plus actual filling)
-            if (isOrderCanBeFulfilled == 1) {
-                // actual filling process (only consider actual pointers)
-                while (1) { // for every slot, try to fill the order
-                // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
-                int isFinalBatch = (todo.orders[orderIndex].qty - currentOrderScheduledQty <= timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
-                if (isFinalBatch) {
-                    ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, todo.orders[orderIndex].qty - currentOrderScheduledQty);
-                    batchNo++;
-                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
-                    currentOrderScheduledQty = todo.orders[orderIndex].qty;
-                    if (factoryInDay == 2) {
-                        factoryInDay = 0;
-                        dayIndex++;
-                    } else {
-                        factoryInDay++;
-                    }
-                    break;
-                } else {
-                    // if not, fill the slot with the remaining cap
-                    ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
-                    batchNo++;
-                    currentOrderScheduledQty += timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty;
-                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
-                }
-                // if the slot is filled, move to the next slot
-                // if factory index is 2, move to the next day, or move to the next factory
+        // if simulation is successful, then actually fill the timetable (same process but plus actual filling)
+        if (isOrderCanBeFulfilled == 1) {
+            // actual filling process (only consider actual pointers)
+            while (1) { // for every slot, try to fill the order
+            // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
+            int isFinalBatch = (todo.orders[orderIndex].qty - currentOrderScheduledQty <= timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
+            if (isFinalBatch) {
+                ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, todo.orders[orderIndex].qty - currentOrderScheduledQty);
+                batchNo++;
+                addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
+                currentOrderScheduledQty = todo.orders[orderIndex].qty;
                 if (factoryInDay == 2) {
                     factoryInDay = 0;
                     dayIndex++;
                 } else {
                     factoryInDay++;
                 }
-                }
+                break;
             } else {
-                // if not, add the order to rejected list
-                rejectedOrders[rejectedCount] = todo.orders[orderIndex];
-                rejectedCount++;
+                // if not, fill the slot with the remaining cap
+                ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
+                batchNo++;
+                currentOrderScheduledQty += timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty;
+                addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
             }
+            // if the slot is filled, move to the next slot
+            // if factory index is 2, move to the next day, or move to the next factory
+            if (factoryInDay == 2) {
+                factoryInDay = 0;
+                dayIndex++;
+            } else {
+                factoryInDay++;
+            }
+            }
+        } else {
+            // if not, add the order to rejected list
+            rejectedOrders[rejectedCount] = todo.orders[orderIndex];
+            rejectedCount++;
         }
-
-
-
-
-    } 
+    }
     
     
     // 结束结果应当为一个填好的timetable，以及一个rejected orders list //
@@ -887,7 +920,7 @@ int main() {
     char input[100];
     char command[20];
     char arg1[20], arg2[20], arg3[20], arg4[20];
-    char algorithm[20] = "FCFS"; // for testing only // MARK: TEST VALUE
+    char algorithm[20] = "PLEASE INPUT ALGORITHM"; // for testing only // MARK: TEST VALUE
     char outputFileName[20] = "output.txt"; // for testing only // MARK: TEST VALUE
     char batchFile[20];
 
