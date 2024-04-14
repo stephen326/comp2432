@@ -348,7 +348,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
                 if (isFinalBatch) {
                     // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty);
                     SIMbatchNo++;
-                    // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
+                    // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Should check same product)
                     SIMcurrentOrderScheduledQty = todo.orders[orderIndex].qty;
                     isOrderCanBeFulfilled = 1;
                     break;
@@ -356,7 +356,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
                     // if not, fill the slot with the remaining cap
                     // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
                     SIMbatchNo++;
-                    // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
+                    // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Should check same product)
                     SIMcurrentOrderScheduledQty += timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty;
                 }
                 // if the slot is filled, move to the next slot
@@ -382,7 +382,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
                 if (isFinalBatch) {
                     ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, todo.orders[orderIndex].qty - currentOrderScheduledQty);
                     batchNo++;
-                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
                     currentOrderScheduledQty = todo.orders[orderIndex].qty;
                     if (factoryInDay == 2) {
                         factoryInDay = 0;
@@ -396,7 +396,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
                     ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
                     batchNo++;
                     currentOrderScheduledQty += timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty;
-                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
                 }
                 // if the slot is filled, move to the next slot
                 // if factory index is 2, move to the next day, or move to the next factory
@@ -484,7 +484,38 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
             write(p2cPipe[i][1], READY, sizeof(READY));
         }
 
+        char report[3*(CAPACITY*80 + 200)];
+        // init
+        strcpy(report, "");
         // Parent 应当等待所有child完成后，从pipe读取report，将所有的report合并，然后输出到output file
+        // loop to read from all child, and 1. wait for ready signal, and then 2. read report to merge
+        
+        //a large buf
+        char largeBuf[(CAPACITY*80 + 200)+200];
+        for (i = 0; i < NUMBER_OF_CHILD; i++) {
+            while (1) {
+                n = read(c2pPipe[i][0], buf, 80);
+                if (n > 0 && strcmp(buf, READY) == 0) {
+                    printf("Parent: Child %d is ready\n", i);
+                    break;
+                }
+            }
+            // read report from child
+            n = read(c2pPipe[i][0], largeBuf, (CAPACITY*80 + 200) + 200);
+            if (n > 0) {
+                strcat(report, largeBuf);
+            }
+        }
+
+        // write report to output file, if exists, overwrite
+        FILE *file = fopen(outputFileName, "w");
+        if (file == NULL) {
+            perror("Error opening file");
+            exit(1);
+        }
+        fprintf(file, "%s", report);
+        fclose(file);
+
         // 此外，Parent 应当等待所有child完成后，将所有的rejected orders list合并（如有从Child得到的update），然后输出到output file
 
 
@@ -562,7 +593,7 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         char report[CAPACITY*80 + 200];
         // add header (child 0 for X, 1 for Y, 2 for Z)
         if (myIndex == 0) {
-            sprintf(report, "---------------------------------------------------------------------\nPlant_X (300 per day)\n");
+            sprintf(report, "---------------------------------------------------------------------\nPlant_X (300 per day)\n"); // MARK: Should use constant
         } else if (myIndex == 1) {
             sprintf(report, "---------------------------------------------------------------------\nPlant_Y (400 per day)\n");
         } else if (myIndex == 2) {
@@ -639,6 +670,15 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         }
         fprintf(file, "%s", report);
         fclose(file);
+
+        // write ready signal to parent
+        write(c2pPipe[myIndex][1], READY, sizeof(READY));
+
+        // write report to parent
+        char reportMsg[CAPACITY*80 + 200];
+        sprintf(reportMsg, "\n-----------------------------------------------------------------------------\nReport from Child %d\n", myIndex);
+        strcat(reportMsg, report);
+        write(c2pPipe[myIndex][1], reportMsg, sizeof(reportMsg));
 
 
 
@@ -811,8 +851,8 @@ int main() {
     char input[100];
     char command[20];
     char arg1[20], arg2[20], arg3[20], arg4[20];
-    char algorithm[20] = "FCFS"; // for testing only
-    char outputFileName[20] = "output"; // for testing only
+    char algorithm[20] = "FCFS"; // for testing only // MARK: TEST VALUE
+    char outputFileName[20] = "output.txt"; // for testing only // MARK: TEST VALUE
     char batchFile[20];
 
     printf("~~WELCOME TO PLS~~\n");
