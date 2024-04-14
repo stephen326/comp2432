@@ -18,6 +18,8 @@ typedef struct {
     int year;
     int month;
     int day;
+    // string
+    char str[11]; // Date format is YYYY-MM-DD, including null character \0
 } Date;
 
 // a null date
@@ -88,6 +90,12 @@ int dateInterval(Date start, Date end) {
         date = dateInc(date);
     }
     return interval;
+}
+
+// Date method: date to string  (and save to the corresponding string in the struct)
+void dateToStr(Date* date) {
+    // (YYYY-MM-DD) e.g.(2010-01-02)
+    sprintf(date->str, "%d-%02d-%02d", date->year, date->month, date->day);
 }
 
 // define order struct to store order information
@@ -376,6 +384,12 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
                     batchNo++;
                     addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Here we currently do not check if the batches in the same slot are the same product)
                     currentOrderScheduledQty = todo.orders[orderIndex].qty;
+                    if (factoryInDay == 2) {
+                        factoryInDay = 0;
+                        dayIndex++;
+                    } else {
+                        factoryInDay++;
+                    }
                     break;
                 } else {
                     // if not, fill the slot with the remaining cap
@@ -401,9 +415,26 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         }
 
 
-        
+
 
     } // 结束结果应当为一个填好的timetable，以及一个rejected orders list
+
+    // testing: print out the timetable (only the slot not empty) (also note which order is the batch from and batch qty)
+    // order by batch number (Day0 (fac0 -> fac1 -> fac2), Day1 (fac0 -> fac1 -> fac2), ...
+    // print out format like a table
+    for (i = 0; i < period.interval; i++) {
+        printf("Day %d\n", i);
+        for (n = 0; n < 3; n++) {
+            printf("Factory %d: ", n);
+            for (int j = 0; j < CAPACITY; j++) {
+                if (timetable[n][i].batches[j].batchNo != -1) {
+                    printf("Batch %d: %s %d %s | ", timetable[n][i].batches[j].batchNo, timetable[n][i].batches[j].order.orderNo, timetable[n][i].batches[j].batchQty, timetable[n][i].batches[j].order.product);
+                }
+            }
+            printf("\n");
+        }
+    }
+
 
     // 4. set up pipes and fork child processes
 
@@ -506,6 +537,113 @@ void executeMainPLS(char algorithm[], char outputFileName[]) {
         }
 
         // Child 应当取用自己的timetable，然后开始生成output report，最后将report发送给parent
+
+        /* 格式如下：
+
+        ---------------------------------------------------------------------\n
+        Plant_X (300 per day)\n
+        2024-06-01 to 2024-06-30\n
+        ---------------------------------------------------------------------\n
+            Date   | Product Name |  Order Number |  Quantity  |  Due Date\n
+        ---------------------------------------------------------------------\n
+        2024-06-01 |  Product_A   |     P0001     |    300     |  2024-06-10\n
+        2024-06-02 |  Product_A   |     P0001     |    300     |  2024-06-10\n
+        2024-06-03 |  Product_A   |     P0001     |    300     |  2024-06-10\n
+        2024-06-04 |  Product_A   |     P0001     |    300     |  2024-06-12\n
+        2024-06-05 |  Product_A   |     P0002     |    300     |  2024-06-10\n
+        2024-06-06 |  Product_A   |     P0003     |    300     |  2024-06-17\n
+        2024-06-07 |  N/A         |     N/A       |    N/A     |  N/A       \n
+        2024-06-08 |  Product_A   |     P0007     |    300     |  2024-06-19\n
+        ---------------------------------------------------------------------\n
+        
+        */
+
+        // a string for report
+        char report[CAPACITY*80 + 200];
+        // add header (child 0 for X, 1 for Y, 2 for Z)
+        if (myIndex == 0) {
+            sprintf(report, "---------------------------------------------------------------------\nPlant_X (300 per day)\n");
+        } else if (myIndex == 1) {
+            sprintf(report, "---------------------------------------------------------------------\nPlant_Y (400 per day)\n");
+        } else if (myIndex == 2) {
+            sprintf(report, "---------------------------------------------------------------------\nPlant_Z (500 per day)\n");
+        }
+
+        // add period
+        char periodStr[50];
+        // get the period string
+        dateToStr(&period.startDate);
+        dateToStr(&period.endDate);
+        sprintf(periodStr, "%s to %s\n", period.startDate.str, period.endDate.str);
+        strcat(report, periodStr);
+
+        // add table header
+        strcat(report, "---------------------------------------------------------------------\n");
+        strcat(report, "    Date   | Product Name |  Order Number |  Quantity  |  Due Date\n");
+        strcat(report, "---------------------------------------------------------------------\n");
+
+        // add table content (if one day has multiple batches, print multiple lines. but if no batch, print N/A)
+        for (i = 0; i < period.interval; i++) {
+            // get the date
+            char dateStr[50];
+            dateToStr(&timetable[myIndex][i].date);
+            sprintf(dateStr, "%s | ", timetable[myIndex][i].date.str);
+            strcat(report, dateStr);
+
+            // get the batches (to maintain the format, we need to pad spaces if the string is shorter)
+            for (n = 0; n < CAPACITY; n++) {
+                if (timetable[myIndex][i].batches[n].batchNo != -1) {
+                    char batchStr[100];
+                    // qty string (total 8 positions, first fill the qty num, and then pad to 8)
+                    char qtyStr[10];
+                    sprintf(qtyStr, "%d", timetable[myIndex][i].batches[n].batchQty);
+                    int qtyStrLen = strlen(qtyStr);
+                    // pad spaces to qtyStr
+                    for (int j = 0; j < 8 - qtyStrLen; j++) {
+                        strcat(qtyStr, " ");
+                    }
+                    // add the batch string
+                    sprintf(batchStr, " %s   |     %s     |    %s|  %s\n", timetable[myIndex][i].batches[n].order.product, timetable[myIndex][i].batches[n].order.orderNo, qtyStr, timetable[myIndex][i].batches[n].order.due_str);
+                    strcat(report, batchStr);
+                }
+            }
+            if (timetable[myIndex][i].batchCount == 0) {
+                strcat(report, " N/A         |     N/A       |    N/A     |  N/A       \n");
+            }
+        }
+
+        // add end line
+        strcat(report, "---------------------------------------------------------------------\n");
+
+        // print out the report
+        //printf("Child %d report:\n%s\n", myIndex, report);
+
+        // only child 0 print out the report
+        if (myIndex == 0) {
+            printf("TESTING Child %d report:\n%s\n", myIndex, report);
+        }
+
+        // write report to file named Plant_X.txt (if already exists, overwrite)
+        char fileName[20];
+        if (myIndex == 0) {
+            strcpy(fileName, "Plant_X.txt");
+        } else if (myIndex == 1) {
+            strcpy(fileName, "Plant_Y.txt");
+        } else if (myIndex == 2) {
+            strcpy(fileName, "Plant_Z.txt");
+        }
+        FILE *file = fopen(fileName, "w");
+        if (file == NULL) {
+            perror("Error opening file");
+            exit(1);
+        }
+        fprintf(file, "%s", report);
+        fclose(file);
+
+
+
+
+
 
         ///////////////// CHILD LOGIC END ////////////////////
 
