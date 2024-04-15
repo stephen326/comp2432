@@ -1378,7 +1378,11 @@ int main() {
         }
         else if (strcmp(command, "runPLS") == 0) {
             sscanf(input, "%*s %s | printREPORT > %s", algorithm, outputFileName);
-            // 调用同一文件夹中的main.c中的main函数，并传递算法和输出文件名作为参数
+            // check if the algorithm is valid
+            if (strcmp(algorithm, "FCFS") != 0 && strcmp(algorithm, "PR") != 0 && strcmp(algorithm, "WP") != 0) {
+                printf("Invalid algorithm\n");
+                continue;
+            }
             executeMainPLS(algorithm);
             analysis(algorithm,outputFileName);
         } else if (strcmp(command, "exitPLS") == 0) {
