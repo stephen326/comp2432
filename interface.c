@@ -9,7 +9,8 @@
 #define NUMBER_OF_CHILD 3
 #define READY "R" // student can send this signal to parent to state that he finish on receive 
 #define END "E" // END game signal
-#define CAPACITY 110 // maximum number of orders to be handled
+#define CAPACITY 1500 // maximum number of orders to be handled
+#define CAPACITY2 5
 #define PRODUCTIVITY_X 300
 #define PRODUCTIVITY_Y 400
 #define PRODUCTIVITY_Z 500
@@ -133,7 +134,7 @@ ProdBatch nullBatch = {-1, {"NN", "NN", {0, 0, 0}, -1, "NN"}, -1};
 
 typedef struct {
     Date date;
-    ProdBatch batches[CAPACITY];
+    ProdBatch batches[CAPACITY2];
     int batchCount;
     int batchQty;
     int capacity;
@@ -156,7 +157,7 @@ oneDaySchedule initSchedule(Date date, int factory) { // factory 0, 1, 2 for X, 
     }
     // pad nullBatch to all batches
     int i;
-    for (i = 0; i < CAPACITY; i++) {
+    for (i = 0; i < CAPACITY2; i++) {
         schedule.batches[i] = nullBatch;
     }
     return schedule;
@@ -168,7 +169,7 @@ void addProdBatch(oneDaySchedule* schedule, ProdBatch batch) {
     perror("Schedule pointer is NULL");
     exit(EXIT_FAILURE);
     }
-    if (schedule->batchCount >= CAPACITY) {
+    if (schedule->batchCount >= CAPACITY2) {
         printf("Error: Reached maximum capacity\n");
         return;
     }
@@ -469,7 +470,7 @@ void executeMainPLS(char algorithm[]) {
         printf("Day %d\n", i);
         for (n = 0; n < 3; n++) {
             printf("Factory %d: ", n);
-            for (int j = 0; j < CAPACITY; j++) {
+            for (int j = 0; j < CAPACITY2; j++) { // loop through all batches
                 if (timetable[n][i].batches[j].batchNo != -1) {
                     printf("Batch %d: %s %d %s | ", timetable[n][i].batches[j].batchNo, timetable[n][i].batches[j].order.orderNo, timetable[n][i].batches[j].batchQty, timetable[n][i].batches[j].order.product);
                 }
@@ -691,7 +692,7 @@ void executeMainPLS(char algorithm[]) {
             strcat(report, dateStr);
 
             // get the batches (to maintain the format, we need to pad spaces if the string is shorter)
-            for (n = 0; n < CAPACITY; n++) {
+            for (n = 0; n < CAPACITY2; n++) {
                 if (timetable[myIndex][i].batches[n].batchNo != -1) {
                     char batchStr[100];
                     // qty string (total 8 positions, first fill the qty num, and then pad to 8)
