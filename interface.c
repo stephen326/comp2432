@@ -445,7 +445,7 @@ void executeMainPLS(char algorithm[]) {
                 if (isFinalBatch) {
                     ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, todo.orders[orderIndex].qty - currentOrderScheduledQty);
                     batchNo++;
-                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch);
                     currentOrderScheduledQty = todo.orders[orderIndex].qty;
                     if (factoryInDay == 2) {
                         factoryInDay = 0;
@@ -459,7 +459,7 @@ void executeMainPLS(char algorithm[]) {
                     ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
                     batchNo++;
                     currentOrderScheduledQty += timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty;
-                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch);
                 }
                 if (factoryInDay == 2) {
                     factoryInDay = 0;
@@ -1353,8 +1353,8 @@ int main() {
     char input[100];
     char command[20];
     char arg1[20], arg2[20], arg3[20], arg4[20];
-    char algorithm[20] = "alg"; // for testing only // MARK: TEST VALUE
-    char outputFileName[20] = "Report.txt"; // for testing only // MARK: TEST VALUE
+    char algorithm[20] = "FCFS"; // default algorithm
+    char outputFileName[20] = "Report.txt"; // default output file name
     char batchFile[20];
 
     printf("~~WELCOME TO PLS~~\n");
