@@ -7,20 +7,20 @@
 #include <time.h>
 
 #define NUMBER_OF_CHILD 3
-#define READY "R" // student can send this signal to parent to state that he finish on receive 
-#define END "E" // END game signal
-#define CAPACITY 1500 // maximum number of orders to be handled
-#define CAPACITY2 5
+#define READY "R"
+#define END "E"
+#define CAPACITY 1500 // maximum number of orders to be handled expected
+#define CAPACITY2 3
 #define PRODUCTIVITY_X 300
 #define PRODUCTIVITY_Y 400
 #define PRODUCTIVITY_Z 500
 
-// define struct to store date
+//#######  BLOCK 1: FUNCTIONS  #######//
+//#### SECTION 1: Date & methods ####//
 typedef struct {
     int year;
     int month;
     int day;
-    // string
     char str[11]; // Date format is YYYY-MM-DD, including null character \0
 } Date;
 
@@ -35,7 +35,8 @@ Date strToDate(char str[]) {
 }
 
 // Date method: compare dates
-int datecmp(Date date1, Date date2) { // if 1 earlier than 2, return -1; if 1 later than 2, return 1; if equal, return 0
+int datecmp(Date date1, Date date2) { 
+    // if 1 earlier than 2, return -1; if 1 later than 2, return 1; if equal, return 0
     if (date1.year < date2.year) {
         return -1;
     } else if (date1.year > date2.year) {
@@ -83,7 +84,7 @@ Date dateInc(Date date) {
     return newDate;
 }
 
-// Date method: Calculate date sum between start and end (including both sides) (consider 30/31/Feb. and leap year)
+// Date method: Calculate date sum between start and end (including both sides)
 int dateInterval(Date start, Date end) {
     int interval = 0;
     Date date = start;
@@ -100,7 +101,16 @@ void dateToStr(Date* date) {
     sprintf(date->str, "%d-%02d-%02d", date->year, date->month, date->day);
 }
 
-// define order struct to store order information
+// define a period struct to store period information
+typedef struct {
+    Date startDate;
+    Date endDate;
+    int interval;
+} Period;
+
+
+
+//#### SECTION 2: Order & methods ####//
 typedef struct {
     char orderNo[20];
     char due_str[11]; // Date format is YYYY-MM-DD, including null character \0
@@ -120,9 +130,20 @@ typedef struct {
     Order priority_1[CAPACITY]; // array of orders with priorities
     Order priority_2[CAPACITY];
     Order priority_3[CAPACITY];
-    Order orders_priority[CAPACITY * 3]; // array of orders with priorities
+    Order orders_priority[CAPACITY + 10]; // array of orders with priorities
 } Todo;
 
+void usePRList(Todo* todo) {
+    // use priority list to replace orders list
+    int i;
+    for (i = 0; i < CAPACITY; i++) {
+        todo->orders[i] = todo->orders_priority[i];
+    }
+}
+
+
+
+//#### SECTION 3: Batch Schedule & methods ####//
 typedef struct {
     int batchNo;
     Order order;
@@ -140,7 +161,7 @@ typedef struct {
     int capacity;
 } oneDaySchedule;
 
-// schedule init
+// schedule initialization
 oneDaySchedule initSchedule(Date date, int factory) { // factory 0, 1, 2 for X, Y, Z
     oneDaySchedule schedule;
     schedule.date = date;
@@ -186,23 +207,9 @@ ProdBatch sliceOrder2Batch(Order order, int batchNo, int batchQty) { // to slice
     return batch;
 }
 
-// define a period struct to store period information
-typedef struct {
-    Date startDate;
-    Date endDate;
-    int interval;
-} Period;
 
-int findIndex(int arr[], int size, int value) {
-    int i = 0;
-    for (i = 0; i < size; i++) {
-        if (arr[i] == value) {
-            return i;
-        }
-    }
-    return -1;
-}
 
+//#### SECTION 4: File Reading ####//
 void readOrders(char fileName[], Order* orders, int size) {
     FILE *file;
     char line[CAPACITY];
@@ -264,32 +271,31 @@ void readTodo(Todo* todo) {
     }
 }
 
-void usePRList(Todo* todo) {
-    // use priority list to replace orders list
-    int i;
-    for (i = 0; i < CAPACITY; i++) {
-        todo->orders[i] = todo->orders_priority[i];
+
+
+//#### SECTION 5: Other functions ####//
+int findIndex(int arr[], int size, int value) {
+    int i = 0;
+    for (i = 0; i < size; i++) {
+        if (arr[i] == value) {
+            return i;
+        }
     }
+    return -1;
 }
 
+
+
+//#######  BLOCK 2: MAIN PLS  #######//
 void executeMainPLS(char algorithm[]) {
     int i = 0, n = 0; // loop variables
-
     // if algorithm is not FCFS or PR, raise error
     if (strcmp(algorithm, "FCFS") != 0 && strcmp(algorithm, "PR") != 0) {
         perror("Invalid algorithm");
         exit(1);
     }
 
-    /*
-    1.
-    before running PLS, we need to read the orders and period from the files
-    orders file format (line by line): orderNumber dueDate quantity productName
-    example: "P0001 2024-06-10 2000 Product_A" (end with \n)
-    period file format (fist line only): startDate endDate
-    example: "2024-06-01 2024-06-30"
-    */
-
+    // 1. before running PLS, read the orders and period from files
     Todo todo;
     // padding nullOrder to all orders and priority arrays
     for (i = 0; i < CAPACITY; i++) {
@@ -300,22 +306,14 @@ void executeMainPLS(char algorithm[]) {
         todo.orders_priority[i] = nullOrder;
     }
     readTodo(&todo);
-    // testing to print out orders' No until nullOrder /////////////////////////
-    for (i = 0; i < CAPACITY; i++) {
-        if (strcmp(todo.orders[i].orderNo, "NN") == 0) {
-            break;
-        }
-        printf("TESTING Order No: %s\n", todo.orders[i].orderNo);
-    }
+    printf("\nPLS:  Orders load complete\n");
+
     // read period
     Period period;
     readPeriod("periods.txt", &period);
-    // testing to print out period st/ed/in ////////////////////////////////////////////
-    printf("TESTING Period: %d-%d-%d to %d-%d-%d, interval: %d\n", period.startDate.year, period.startDate.month, period.startDate.day, period.endDate.year, period.endDate.month, period.endDate.day, period.interval);
-
+    printf("PLS:  Period load complete: From %d-%d-%d to %d-%d-%d, Total %d days\n", period.startDate.year, period.startDate.month, period.startDate.day, period.endDate.year, period.endDate.month, period.endDate.day, period.interval);
 
     // 2. Construct the timetable for each factory
-
     oneDaySchedule timetable[3][period.interval]; // 3 factories, each factory has a timetable for each day
         // init every time slot with its corresponding date
         for (i = 0; i < 3; i++) {
@@ -325,20 +323,8 @@ void executeMainPLS(char algorithm[]) {
                 day = dateInc(day);
             }
         }
-        // test the timetable print out date padding of each slot
-        /*
-        for (i = 0; i < 3; i++) {
-            for (n = 0; n < period.interval; n++) {
-                printf("TESTING Factory %d, Day %d: %d-%d-%d\n", i, n, timetable[i][n].date.year, timetable[i][n].date.month, timetable[i][n].date.day);
-            }
-        }
-        */
 
-
-    // 3. If Algorithm is FCFS:
-    // PR 算法与 FCFS 实质相同，对于PR的实现可以先按照priority排序，然后按照FCFS的方式处理
-
-    // set a array for rejected orders
+    // 3. Deal with rejected orders
     Order rejectedOrders[CAPACITY];
     int rejectedCount = 0;
     // pad nullOrder to rejected orders
@@ -346,19 +332,16 @@ void executeMainPLS(char algorithm[]) {
         rejectedOrders[i] = nullOrder;
     }
 
+    // 4. Start scheduling
     if (strcmp(algorithm, "FCFS") == 0) {
-        printf("Running PLS with FCFS algorithm\n");
+        printf("PLS:  Use FCFS algorithm\n");
     } else if (strcmp(algorithm, "PR") == 0) {
-        printf("Running PLS with PR algorithm\n");
+        printf("PLS:  Use PR algorithm\n");
         usePRList(&todo);
     } else {
         perror("Invalid algorithm");
         exit(1);
     }
-
-    // 先模拟填，如果填不进去（多次切片之后依然过due），尝试填下一个订单。如果填进去了且不超过due，就实际填。
-    // 填入时间表按照每天的三个工厂，然后依次往后进行第二天第三天
-
     int dayIndex = 0, factoryInDay = 0, batchNo = 0;
     int SIMdayIndex = 0, SIMfactoryInDay = 0, SIMbatchNo = 0;
     int orderIndex;
@@ -392,20 +375,15 @@ void executeMainPLS(char algorithm[]) {
             // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
             int isFinalBatch = (todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty <= timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
             if (isFinalBatch) {
-                // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, todo.orders[orderIndex].qty - SIMcurrentOrderScheduledQty);
                 SIMbatchNo++;
-                // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Should check same product)
                 SIMcurrentOrderScheduledQty = todo.orders[orderIndex].qty;
                 isOrderCanBeFulfilled = 1;
                 break;
             } else {
                 // if not, fill the slot with the remaining cap
-                // commented due to SIM //ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], SIMbatchNo, timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty);
                 SIMbatchNo++;
-                // commented due to SIM //addProdBatch(&timetable[SIMfactoryInDay][SIMdayIndex], batch); //(MARK: Should check same product)
                 SIMcurrentOrderScheduledQty += timetable[SIMfactoryInDay][SIMdayIndex].capacity - timetable[SIMfactoryInDay][SIMdayIndex].batchQty;
             }
-            // if the slot is filled, move to the next slot
             // if factory index is 2, move to the next day, or move to the next factory
             if (SIMfactoryInDay == 2) {
                 SIMfactoryInDay = 0;
@@ -415,43 +393,37 @@ void executeMainPLS(char algorithm[]) {
             }
         }
 
-        //print out the simulation result
-        printf("Order %s simulation result: %d\n", todo.orders[orderIndex].orderNo, isOrderCanBeFulfilled);
-
-
         // if simulation is successful, then actually fill the timetable (same process but plus actual filling)
         if (isOrderCanBeFulfilled == 1) {
             // actual filling process (only consider actual pointers)
             while (1) { // for every slot, try to fill the order
-            // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
-            int isFinalBatch = (todo.orders[orderIndex].qty - currentOrderScheduledQty <= timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
-            if (isFinalBatch) {
-                ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, todo.orders[orderIndex].qty - currentOrderScheduledQty);
-                batchNo++;
-                addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
-                currentOrderScheduledQty = todo.orders[orderIndex].qty;
+                // if the remaining Qty can be fulfilled in this slot's remaining cap, fill the slot and break (final batch of the order)
+                int isFinalBatch = (todo.orders[orderIndex].qty - currentOrderScheduledQty <= timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
+                if (isFinalBatch) {
+                    ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, todo.orders[orderIndex].qty - currentOrderScheduledQty);
+                    batchNo++;
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
+                    currentOrderScheduledQty = todo.orders[orderIndex].qty;
+                    if (factoryInDay == 2) {
+                        factoryInDay = 0;
+                        dayIndex++;
+                    } else {
+                        factoryInDay++;
+                    }
+                    break;
+                } else {
+                    // if not, fill the slot with the remaining cap
+                    ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
+                    batchNo++;
+                    currentOrderScheduledQty += timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty;
+                    addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
+                }
                 if (factoryInDay == 2) {
                     factoryInDay = 0;
                     dayIndex++;
                 } else {
                     factoryInDay++;
                 }
-                break;
-            } else {
-                // if not, fill the slot with the remaining cap
-                ProdBatch batch = sliceOrder2Batch(todo.orders[orderIndex], batchNo, timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty);
-                batchNo++;
-                currentOrderScheduledQty += timetable[factoryInDay][dayIndex].capacity - timetable[factoryInDay][dayIndex].batchQty;
-                addProdBatch(&timetable[factoryInDay][dayIndex], batch); //(MARK: Should check same product)
-            }
-            // if the slot is filled, move to the next slot
-            // if factory index is 2, move to the next day, or move to the next factory
-            if (factoryInDay == 2) {
-                factoryInDay = 0;
-                dayIndex++;
-            } else {
-                factoryInDay++;
-            }
             }
         } else {
             // if not, add the order to rejected list
@@ -459,35 +431,13 @@ void executeMainPLS(char algorithm[]) {
             rejectedCount++;
         }
     }
-    
-    
-    // 结束结果应当为一个填好的timetable，以及一个rejected orders list //
+    // Here, we expect the timetable is completed
 
-    // testing: print out the timetable (only the slot not empty) (also note which order is the batch from and batch qty)
-    // order by batch number (Day0 (fac0 -> fac1 -> fac2), Day1 (fac0 -> fac1 -> fac2), ...
-    // print out format like a table
-    for (i = 0; i < period.interval; i++) {
-        printf("Day %d\n", i);
-        for (n = 0; n < 3; n++) {
-            printf("Factory %d: ", n);
-            for (int j = 0; j < CAPACITY2; j++) { // loop through all batches
-                if (timetable[n][i].batches[j].batchNo != -1) {
-                    printf("Batch %d: %s %d %s | ", timetable[n][i].batches[j].batchNo, timetable[n][i].batches[j].order.orderNo, timetable[n][i].batches[j].batchQty, timetable[n][i].batches[j].order.product);
-                }
-            }
-            printf("\n");
-        }
-    }
-
-
-    // 4. set up pipes and fork child processes
-
-    // variables for pipe and fork
+    // 5. set up pipes and fork child processes
     int   childPids[NUMBER_OF_CHILD];
     int   p2cPipe[NUMBER_OF_CHILD][2]; // pipe sent from parent to child
     int   c2pPipe[NUMBER_OF_CHILD][2]; // pipe sent from child to parent
     char  buf[80];
-    
     // creating pipes
     for (i = 0; i < NUMBER_OF_CHILD; i++) {
         if (pipe(p2cPipe[i]) == -1 || pipe(c2pPipe[i]) == -1) {
@@ -495,7 +445,6 @@ void executeMainPLS(char algorithm[]) {
             exit(1); // exit with error code
         }
     }
-
     // creating childs
     int cpid = 0;
     int root = getppid();
@@ -509,8 +458,7 @@ void executeMainPLS(char algorithm[]) {
             childPids[i] = cpid;
         }
     }
-
-
+    
     if (getppid() == root) {
         ////////////////////////// PARENT RUN THIS //////////////////////////
 
@@ -523,24 +471,17 @@ void executeMainPLS(char algorithm[]) {
         ///////////////// PARENT LOGIC START //////////////////
 
         // send ready signal to all child
-        printf("Parent: Sending ready signal to all child\n");
         for (i = 0; i < NUMBER_OF_CHILD; i++) {
             write(p2cPipe[i][1], READY, sizeof(READY));
         }
-
         char report[3*(CAPACITY*80 + 200)];
-        // init
         strcpy(report, "");
-        // Parent 应当等待所有child完成后，从pipe读取report，将所有的report合并，然后输出到output file
         // loop to read from all child, and 1. wait for ready signal, and then 2. read report to merge
-        
-        //a large buf
         char largeBuf[(CAPACITY*80 + 200)+200];
         for (i = 0; i < NUMBER_OF_CHILD; i++) {
             while (1) {
                 n = read(c2pPipe[i][0], buf, 80);
                 if (n > 0 && strcmp(buf, READY) == 0) {
-                    printf("Parent: Child %d is ready\n", i);
                     break;
                 }
             }
@@ -550,7 +491,6 @@ void executeMainPLS(char algorithm[]) {
                 strcat(report, largeBuf);
             }
         }
-
         // write report to output file, if exists, overwrite
         char outputFileNameSchedule[20] = "overall_schedule.txt";
         // delete the file if exists
@@ -561,21 +501,10 @@ void executeMainPLS(char algorithm[]) {
             exit(1);
         }
         fprintf(file, "%s", report);
+        printf("PLS:  Overall schedule report written to %s\n", outputFileNameSchedule);
         fclose(file);
 
         // output rejected orders files
-        /*文件名:"rejected_orders.dat"
-        格式如下：
-
-        P0001\n
-        P0006\n
-        P0045\n
-        P0009\n
-        P0020\n
-        rejected\n
-
-        */
-        // delete the file if exists
         FILE *file2 = fopen("rejected_orders.dat", "w");
         file2 = fopen("rejected_orders.dat", "w");
         if (file2 == NULL) {
@@ -588,7 +517,6 @@ void executeMainPLS(char algorithm[]) {
             }
             fprintf(file2, "%s\n", rejectedOrders[i].orderNo);
         }
-        //fprintf(file2, "rejected\n");
         fclose(file2);
 
         ///////////////// PARENT LOGIC END ////////////////////
@@ -602,6 +530,8 @@ void executeMainPLS(char algorithm[]) {
         for (i = 0; i < NUMBER_OF_CHILD; i++) {
             wait(NULL);
         }
+
+        // Here, PLS Main is done, go to the next block
         
     } else {
         ////////////////////////// CHILD RUN THIS //////////////////////////
@@ -612,7 +542,6 @@ void executeMainPLS(char algorithm[]) {
             perror("child index not found, unexpected error");
             exit(1);
         }
-
         // close unused pipe ends
         for (i = 0; i < NUMBER_OF_CHILD; i++) {
             if (i != myIndex) {
@@ -620,10 +549,6 @@ void executeMainPLS(char algorithm[]) {
                 close(c2pPipe[i][0]); // close child in
             }
         }
-
-        // print out child index (from 0) and pid
-        printf("Child %d with PID: %d\n", myIndex, getpid());
-
         // NOTE: child can read from p2cPipe[myIndex][0] and write to c2pPipe[myIndex][1]
 
         ///////////////// CHILD LOGIC START //////////////////
@@ -632,57 +557,27 @@ void executeMainPLS(char algorithm[]) {
         while (1) {
             n = read(p2cPipe[myIndex][0], buf, 80);
             if (n > 0 && strcmp(buf, READY) == 0) {
-                printf("Child %d received ready signal from parent\n", myIndex);
                 break;
             }
         }
-
-        // Child 应当取用自己的timetable，然后开始生成output report，最后将report发送给parent
-
-        /* 格式如下：
-
-        ---------------------------------------------------------------------\n
-        Plant_X (300 per day)\n
-        2024-06-01 to 2024-06-30\n
-        ---------------------------------------------------------------------\n
-            Date   | Product Name |  Order Number |  Quantity  |  Due Date\n
-        ---------------------------------------------------------------------\n
-        2024-06-01 |  Product_A   |     P0001     |    300     |  2024-06-10\n
-        2024-06-02 |  Product_A   |     P0001     |    300     |  2024-06-10\n
-        2024-06-03 |  Product_A   |     P0001     |    300     |  2024-06-10\n
-        2024-06-04 |  Product_A   |     P0001     |    300     |  2024-06-12\n
-        2024-06-05 |  Product_A   |     P0002     |    300     |  2024-06-10\n
-        2024-06-06 |  Product_A   |     P0003     |    300     |  2024-06-17\n
-        2024-06-07 |  N/A         |     N/A       |    N/A     |  N/A       \n
-        2024-06-08 |  Product_A   |     P0007     |    300     |  2024-06-19\n
-        ---------------------------------------------------------------------\n
-        
-        */
-
-        // a string for report
         char report[CAPACITY*80 + 200];
-        // add header (child 0 for X, 1 for Y, 2 for Z)
         if (myIndex == 0) {
-            sprintf(report, "---------------------------------------------------------------------\nPlant_X (300 per day)\n"); // MARK: Should use constant
+            sprintf(report, "---------------------------------------------------------------------\nPlant_X (300 per day)\n");
         } else if (myIndex == 1) {
             sprintf(report, "---------------------------------------------------------------------\nPlant_Y (400 per day)\n");
         } else if (myIndex == 2) {
             sprintf(report, "---------------------------------------------------------------------\nPlant_Z (500 per day)\n");
         }
-
         // add period
         char periodStr[50];
-        // get the period string
         dateToStr(&period.startDate);
         dateToStr(&period.endDate);
         sprintf(periodStr, "%s to %s\n", period.startDate.str, period.endDate.str);
         strcat(report, periodStr);
-
         // add table header
         strcat(report, "---------------------------------------------------------------------\n");
         strcat(report, "    Date   | Product Name |  Order Number |  Quantity  |  Due Date\n");
         strcat(report, "---------------------------------------------------------------------\n");
-
         // add table content (if one day has multiple batches, print multiple lines. but if no batch, print N/A)
         for (i = 0; i < period.interval; i++) {
             // get the date
@@ -690,7 +585,6 @@ void executeMainPLS(char algorithm[]) {
             dateToStr(&timetable[myIndex][i].date);
             sprintf(dateStr, "%s | ", timetable[myIndex][i].date.str);
             strcat(report, dateStr);
-
             // get the batches (to maintain the format, we need to pad spaces if the string is shorter)
             for (n = 0; n < CAPACITY2; n++) {
                 if (timetable[myIndex][i].batches[n].batchNo != -1) {
@@ -712,19 +606,10 @@ void executeMainPLS(char algorithm[]) {
                 strcat(report, " N/A         |     N/A       |    N/A     |  N/A       \n");
             }
         }
-
         // add end line
         strcat(report, "---------------------------------------------------------------------\n");
 
-        // print out the report
-        //printf("Child %d report:\n%s\n", myIndex, report);
-
-        // only child 0 print out the report
-        if (myIndex == 0) {
-            printf("TESTING Child %d report:\n%s\n", myIndex, report);
-        }
-
-        // write report to file named Plant_X.txt (if already exists, overwrite)
+        // write report to file named Plant_N.txt (if already exists, overwrite)
         char fileName[20];
         if (myIndex == 0) {
             strcpy(fileName, "Plant_X.dat");
@@ -743,32 +628,40 @@ void executeMainPLS(char algorithm[]) {
         fprintf(file, "%s", report);
         fclose(file);
 
+        // char for factory letter(X/Y/Z)
+        char factoryLetter;
+        if (myIndex == 0) {
+            factoryLetter = 'X';
+        } else if (myIndex == 1) {
+            factoryLetter = 'Y';
+        } else if (myIndex == 2) {
+            factoryLetter = 'Z';
+        }
+        printf("PLS:  [Child %d - %d] Schedule for factory %c OK\n", myIndex, getpid(), factoryLetter);
+
         // write ready signal to parent
         write(c2pPipe[myIndex][1], READY, sizeof(READY));
-
         // write report to parent
         char reportMsg[CAPACITY*80 + 200];
         sprintf(reportMsg, "\n-----------------------------------------------------------------------------\nReport from Child %d\n", myIndex);
         strcat(reportMsg, report);
         write(c2pPipe[myIndex][1], reportMsg, sizeof(reportMsg));
 
-
         ///////////////// CHILD LOGIC END ////////////////////
 
         // write to parent that child is done
         write(c2pPipe[myIndex][1], END, sizeof(END));
-        
         // close remaining pipes
         close(p2cPipe[myIndex][0]); // close child in
         close(c2pPipe[myIndex][1]); // close child out
-
         // exit child
         exit(0);
-    }    
+    }
 }
 
-// MARK: Block start
-// Block : Analysis and reporting
+
+
+//#######  BLOCK 3: Analysis  #######//
 #define MAX_ORDERS 10000 // 假设的最大订单数，你可以根据实际情况调整
 #define MAX_ORDER_NUM 1000
 #define MAX_REJECTED 2000 // Define the maximum number of rejected orders
@@ -810,7 +703,6 @@ typedef struct {
 
 Order3 orders3[MAX_ORDERS]; // 存储所有订单
 
-
 // 计算文件中有数据的行数
 int countLinesWithData(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -830,7 +722,6 @@ int countLinesWithData(const char *filename) {
             count++;
         }
     }
-
     fclose(file);
     return count;
 }
@@ -885,7 +776,6 @@ void addOrder3(const char* plantName, const char* productName, const char* start
     }
 }
 
-
 void processOrders(const char* filename) {
     char plantName[10];
     const char* suffix = ".dat"; // 定义后缀字符串
@@ -930,23 +820,17 @@ void processOrders(const char* filename) {
         if (strcmp(line, "---------------------------------------------------------------------\n") == 0) {
             break; // 到达文件尾部分隔线
         }
-
         char startDate[11], productName[50], orderNumber[10], dueDate[11];
         int quantity;
         // 解析数据行
         if (sscanf(line, "%10s | %49s | %9s | %d | %10s", startDate, productName, orderNumber, &quantity, dueDate) == 5) {
-            
-
 	 	addOrder3(plantName, productName, startDate, orderNumber, quantity, dueDate);
-	
         }
     }
   
     // 关闭文件
     fclose(file);
 }
-
-
 
 // 比较两个订单，首先按订单号排序，如果订单号相同则按工厂名排序
 int compareOrders(const void *a, const void *b) {
@@ -1030,8 +914,6 @@ int calculate_total_days_in_file(const char *filename) {
     return total_days3;
 }
 
-
-// 我不确定total day是什么意思。///////////////////////////////////////////////////////
 void writeFinal3(const char* filename){
 	FILE *file = fopen(filename, "a");
 	if (file == NULL) {
@@ -1098,10 +980,8 @@ void writeOrdersToFile(const char* filename) {
         int occurrences = 1;
         
         int start = i; // Assuming this is meant to track the start index for occurrences
-		
 	int quantity = order.quantity;
 	int days = 1;
-
         // Check for duplicate orders and calculate occurrences
         for (int j = i + 1; j < orderCount3; ++j) {
             if (strcmp(order.plantName, orders3[j].plantName) == 0 && strcmp(order.orderNumber, orders3[j].orderNumber) == 0) {
@@ -1112,8 +992,7 @@ void writeOrdersToFile(const char* filename) {
 			days += 1;
             }
         }
-         
-        total_quantity3 += quantity;
+    total_quantity3 += quantity;
 	total_days3 += days;
 	if(strcmp(str1,order.plantName) == 0){
 		 total_quantity3_X += quantity;
@@ -1186,8 +1065,6 @@ int processRejectedOrders(const char *rejectedOrdersFile, const char *allOrdersF
     char rejectedOrderNumbers[MAX_REJECTED][DATE_LENGTH];
     Rejected_Order3 rejectedArr[MAX_REJECTED];
    int rejectedCount = 0;
-   
-   
     // Open the file containing the rejected order numbers
     FILE *rejectedFile = fopen(rejectedOrdersFile, "r");
     if (!rejectedFile) {
@@ -1199,17 +1076,14 @@ int processRejectedOrders(const char *rejectedOrdersFile, const char *allOrdersF
     while (rejectedCount < MAX_REJECTED && fscanf(rejectedFile, "%11s", rejectedOrderNumbers[rejectedCount]) == 1) {
         rejectedCount++;
     }
-
     fclose(rejectedFile);
     int rejectedIndex=0;
-
     // Open the file containing all orders
     FILE *allOrdersFile = fopen(allOrdersFilePath, "r");
     if (!allOrdersFile) {
         perror("Error opening all_orders.txt");
         return -1;
     }
-
     // Read through all orders and check if any are rejected
     char line[1024]; // Assuming the line will not exceed 1023 characters
     while (fgets(line, sizeof(line), allOrdersFile)) {
@@ -1217,7 +1091,6 @@ int processRejectedOrders(const char *rejectedOrdersFile, const char *allOrdersF
         char date[DATE_LENGTH];
         char productName[MAX_PRODUCT_NAME];
         int quantity;
-
         if (sscanf(line, "%s %s %d %s", orderNumber, date, &quantity, productName) == 4) {
             // Check against rejected order numbers
             for (int i = 0; i < rejectedCount; i++) {
@@ -1256,15 +1129,12 @@ int processRejectedOrders(const char *rejectedOrdersFile, const char *allOrdersF
 	    rejectedArr[i].quantity);
     }
 
-
     // Write footer to the report file
     fprintf(reportFile, "\n\t\t\t- End -\n");
     fprintf(reportFile, "===========================================================================\n\n\n");
-
     fclose(reportFile);
     return 0;
 }
-
 
 // const char* file1, const char* file2, const char* file3, const char* rejectionFile
 int analysis(char algorithm[], char outputFileName[]) {
@@ -1274,18 +1144,15 @@ int analysis(char algorithm[], char outputFileName[]) {
     remove(outputFileName);
 
     int acceptedOrders = 0; // 你需要根据实际情况来计算接受的订单数量
-    
     processOrders("Plant_X.dat");
     processOrders("Plant_Y.dat");
     processOrders("Plant_Z.dat");
-	
     qsort(orders3, orderCount3, sizeof(Order3), compareOrders);
     
     // 假设这是你的算法名称和已接受的订单数
     const char *algorithmName = algorithm;
     const char *allOrdersFile = "All_Orders.txt";
     const char *rejectedOrdersFile = "rejected_orders.dat";
-
     acceptedOrders = countAcceptedOrders(allOrdersFile, rejectedOrdersFile);
     
     // 调用函数写入报告头部
@@ -1294,78 +1161,58 @@ int analysis(char algorithm[], char outputFileName[]) {
         return 1;
     }
 
-
-    // TODO: 在这里添加写入具体的订单数据的代码
     writeOrdersToFile(outputFileName);
     appendReportWithRejectedCount("rejected_orders.dat", outputFileName);
     processRejectedOrders("rejected_orders.dat", "All_Orders.txt", outputFileName);
-	
-
     writeFinal3(outputFileName);
+    printf("PLS:  Analysis report written to %s\n\n", outputFileName);
 
     // reset orderCount3
     orderCount3 = 0;
     // clear the orders3 array
     memset(orders3, 0, sizeof(orders3));
+    // reset total_days3, total_quantity3
+    total_days3 = 0;
+    total_quantity3 = 0;
+    total_days3_X = 0;
+    total_quantity3_X = 0;
+    total_days3_Y = 0;
+    total_quantity3_Y = 0;
+    total_days3_Z = 0;
+    total_quantity3_Z = 0;
 
     return 0;
 }
 
-// MARK: Block ends
 
+
+//#######  BLOCK 4: Interface  #######//
 void addPeriod(char startDate[], char endDate[]) {
     printf("Period added: %s to %s\n", startDate, endDate);
-
     FILE *file;
-    
     // 删除已存在的文件
     remove("periods.txt");
-
     file = fopen("periods.txt", "a"); // 打开文件以追加模式写入
     if (file == NULL) {
         printf("Error opening file\n");
         return;
     }
-
     // 将时间段写入文件
     fprintf(file, "%s %s\n", startDate, endDate);
-
     fclose(file);
 }
-
-
-//------------------------------------------------------以前有问题的
-// int checkDuplicate(char fileName[], char orderNumber[]) {
-//     FILE *file = fopen(fileName, "r");
-//     if (file == NULL) {
-//         return 0; // 文件不存在，不存在重复
-//     }
-
-//     char line[100];
-//     while (fgets(line, sizeof(line), file)) {
-//         char *token = strtok(line, " ");
-//         if (token != NULL && strcmp(token, orderNumber) == 0) {
-//             fclose(file);
-//             return 1; // 存在重复
-//         }
-//     }
-//     fclose(file);
-//     return 0; // 不存在重复
-// }
 
 int checkDuplicate(char fileName[], char orderNumber[]) {
     FILE* file = fopen(fileName, "r");
     if (file == NULL) {
         return 0; // 文件不存在，不存在重复
     }
-
     char line[100];
     while (fgets(line, sizeof(line), file)) {
         // 提取每行的订单号部分（前五个字符）
         char existingOrderNumber[6];
         strncpy(existingOrderNumber, line, 5);
         existingOrderNumber[5] = '\0';
-
         // 比较订单号是否相同
         if (strcmp(existingOrderNumber, orderNumber) == 0) {
             fclose(file);
@@ -1438,9 +1285,6 @@ void addOrder(char orderNumber[], char dueDate[], int quantity, char productName
     fclose(file);
 }
 
-
-
-
 // 添加批量订单
 void addBatch(char batchFile[]) {
     FILE *file = fopen(batchFile, "r");
@@ -1448,32 +1292,19 @@ void addBatch(char batchFile[]) {
         printf("Error opening file\n");
         return;
     }
-
     char orderNumber[20], dueDate[11], productName[20];
     int quantity;
-
     // 逐行读取批量文件
     while (fscanf(file, "%s %s %d %s", orderNumber, dueDate, &quantity, productName) != EOF) {
         addOrder(orderNumber, dueDate, quantity, productName);
     }
-
     fclose(file);
 }
-
-
-// functionality has been realized in executeMainPLS
-/*
-void runPLS(char algorithm[]) {
-    // 在这里执行 PLS 算法
-    printf("Running PLS with algorithm: %s\n", algorithm);
-}
-*/
 
 void printREPORT(char outputFile[]) {
     // 在这里打印报告
     printf("Printing report to file: %s\n", outputFile);
 }
-
 
 int main() {
     char input[100];
