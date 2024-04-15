@@ -117,13 +117,14 @@ typedef struct {
     Date due; // Date struct to store due date
     int  qty;
     char product[20];
+    float wPriority; // weighted priority
 } Order;
 
 // a null Order
-Order nullOrder = {"NN", "NN", {0, 0, 0}, -1, "NN"};
+Order nullOrder = {"NN", "NN", {0, 0, 0}, -1, "NN", -1};
 
 // a tombstone Order (only used for rejected orders)
-Order tombstoneOrder = {"XX", "XX", {0, 0, 0}, -2, "XX"};
+Order tombstoneOrder = {"XX", "XX", {0, 0, 0}, -2, "XX", -2};
 
 typedef struct {
     Order orders[CAPACITY]; // array of all orders
@@ -141,7 +142,46 @@ void usePRList(Todo* todo) {
     }
 }
 
+// a method to calculate weighted priority
+void calcWPriority(Order* order, Date startDate) {
+    // get amount and period
+    int amount = order->qty;
+    int period = dateInterval(startDate, order->due);
+    float w = 2.1;
+    // calculate weighted priority
+    float wPriority = (amount * w) / period;
+    order->wPriority = wPriority;
+    return;
+}
 
+void useWP(Todo* todo, Period* period) {
+    // calculate weighted priority for all orders
+    int i;
+    for (i = 0; i < CAPACITY; i++) {
+        if (strcmp(todo->orders[i].orderNo, "NN") == 0) {
+            break;
+        }
+        calcWPriority(&todo->orders[i], period->startDate);
+    }
+    // sort orders by weighted priority
+    Order temp;
+    for (i = 0; i < CAPACITY; i++) {
+        if (strcmp(todo->orders[i].orderNo, "NN") == 0) {
+            break;
+        }
+        int j;
+        for (j = i + 1; j < CAPACITY; j++) {
+            if (strcmp(todo->orders[j].orderNo, "NN") == 0) {
+                break;
+            }
+            if (todo->orders[i].wPriority < todo->orders[j].wPriority) {
+                temp = todo->orders[i];
+                todo->orders[i] = todo->orders[j];
+                todo->orders[j] = temp;
+            }
+        }
+    }
+}
 
 //#### SECTION 3: Batch Schedule & methods ####//
 typedef struct {
@@ -151,7 +191,7 @@ typedef struct {
 } ProdBatch;
 
 // a null ProdBatch
-ProdBatch nullBatch = {-1, {"NN", "NN", {0, 0, 0}, -1, "NN"}, -1};
+ProdBatch nullBatch = {-1, {"NN", "NN", {0, 0, 0}, -1, "NN", -1}, -1};
 
 typedef struct {
     Date date;
@@ -289,8 +329,8 @@ int findIndex(int arr[], int size, int value) {
 //#######  BLOCK 2: MAIN PLS  #######//
 void executeMainPLS(char algorithm[]) {
     int i = 0, n = 0; // loop variables
-    // if algorithm is not FCFS or PR, raise error
-    if (strcmp(algorithm, "FCFS") != 0 && strcmp(algorithm, "PR") != 0) {
+    // if algorithm is not FCFS or PR or WP, raise error
+    if (strcmp(algorithm, "FCFS") != 0 && strcmp(algorithm, "PR") != 0 && strcmp(algorithm, "WP") != 0) {
         perror("Invalid algorithm");
         exit(1);
     }
@@ -338,6 +378,9 @@ void executeMainPLS(char algorithm[]) {
     } else if (strcmp(algorithm, "PR") == 0) {
         printf("PLS:  Use PR algorithm\n");
         usePRList(&todo);
+    } else if (strcmp(algorithm, "WP") == 0) {
+        printf("PLS:  Use WP algorithm\n");
+        useWP(&todo, &period);
     } else {
         perror("Invalid algorithm");
         exit(1);
