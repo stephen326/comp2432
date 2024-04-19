@@ -535,7 +535,7 @@ void executeMainPLS(char algorithm[]) {
             }
         }
         // write report to output file, if exists, overwrite
-        char outputFileNameSchedule[20] = "overall_schedule.txt";
+        char outputFileNameSchedule[20] = "PLS_Schedule_G06.txt";
         // delete the file if exists
         remove(outputFileNameSchedule);
         FILE *file = fopen(outputFileNameSchedule, "w");
