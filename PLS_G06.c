@@ -10,8 +10,8 @@
 #define NUMBER_OF_CHILD 3
 #define READY "R"
 #define END "E"
-#define CAPACITY 1500 // maximum number of orders to be handled expected
-#define CAPACITY2 3
+#define CAPACITY 700 // maximum number of orders to be handled expected
+#define CAPACITY2 2
 #define PRODUCTIVITY_X 300
 #define PRODUCTIVITY_Y 400
 #define PRODUCTIVITY_Z 500
@@ -574,6 +574,8 @@ void executeMainPLS(char algorithm[]) {
         for (i = 0; i < NUMBER_OF_CHILD; i++) {
             wait(NULL);
         }
+        // return to the main function
+        return;
 
         // Here, PLS Main is done, go to the next block
         
