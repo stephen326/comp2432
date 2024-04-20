@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <time.h>
 
+
 #define NUMBER_OF_CHILD 3
 #define READY "R"
 #define END "E"
@@ -1328,21 +1329,69 @@ void addOrder(char orderNumber[], char dueDate[], int quantity, char productName
     fclose(file);
 }
 
-// 添加批量订单
+// // 添加批量订单
+// void addBatch(char batchFile[]) {
+//     FILE *file = fopen(batchFile, "r");
+//     if (file == NULL) {
+//         printf("Error opening file\n");
+//         return;
+//     }
+//     char notuse[20], orderNumber[20], dueDate[11], productName[20];
+//     int quantity;
+//     // 逐行读取批量文件
+//     while (fscanf(file, "%s %s %s %d %s", notuse, orderNumber, dueDate, &quantity, productName) != EOF) {
+//         printf("TESTING: READ ORDER: %s %s %d %s\n", orderNumber, dueDate, quantity, productName);
+//         addOrder(orderNumber, dueDate, quantity, productName);
+//     }
+//     fclose(file);
+// }
+
 void addBatch(char batchFile[]) {
     FILE *file = fopen(batchFile, "r");
     if (file == NULL) {
         printf("Error opening file\n");
         return;
     }
-    char orderNumber[20], dueDate[11], productName[20];
+    char notuse[20], orderNumber[20], dueDate[11], productName[20];
+    char quantityStr[20];
     int quantity;
     // 逐行读取批量文件
-    while (fscanf(file, "%s %s %d %s", orderNumber, dueDate, &quantity, productName) != EOF) {
+    while (fscanf(file, "%s %s %s %s %s", notuse, orderNumber, dueDate, quantityStr, productName) == 5) {
+        // 检查订单号格式
+        if (strlen(orderNumber) != 5 || orderNumber[0] != 'P' || !isdigit(orderNumber[1]) || !isdigit(orderNumber[2]) ||
+            !isdigit(orderNumber[3]) || !isdigit(orderNumber[4])) {
+            printf("Invalid order number format: %s\n", orderNumber);
+            continue;
+        }
+        // 检查到期日期格式
+        if (strlen(dueDate) != 10 || dueDate[4] != '-' || dueDate[7] != '-' ||
+            !isdigit(dueDate[0]) || !isdigit(dueDate[1]) || !isdigit(dueDate[2]) || !isdigit(dueDate[3]) ||
+            !isdigit(dueDate[5]) || !isdigit(dueDate[6]) || !isdigit(dueDate[8]) || !isdigit(dueDate[9])) {
+            printf("Invalid due date format: %s\n", dueDate);
+            continue;
+        }
+        // 检查数量是否为正整数
+        int i;
+        for (i = 0; quantityStr[i] != '\0'; i++) {
+            if (!isdigit(quantityStr[i])) {
+                printf("Invalid quantity format: %s\n", quantityStr);
+                break;
+            }
+        }
+        if (quantityStr[i] != '\0') {
+            continue; // 跳过当前行
+        }
+        quantity = atoi(quantityStr); // 将数量字符串转换为整数
+        if (quantity <= 0) {
+            printf("Invalid quantity: %d\n", quantity);
+            continue;
+        }
+        printf("TESTING: READ ORDER: %s %s %d %s\n", orderNumber, dueDate, quantity, productName);
         addOrder(orderNumber, dueDate, quantity, productName);
     }
     fclose(file);
 }
+
 
 void printREPORT(char outputFile[]) {
     // 在这里打印报告
@@ -1364,7 +1413,7 @@ int main() {
         fgets(input, sizeof(input), stdin);
         sscanf(input, "%s", command);
 
-        if (strcmp(command, "addPEIOD") == 0) {
+        if (strcmp(command, "addPERIOD") == 0) {
             sscanf(input, "%*s %s %s", arg1, arg2);
             addPeriod(arg1, arg2);
         } else if (strcmp(command, "addORDER") == 0) {
